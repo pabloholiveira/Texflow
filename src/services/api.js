@@ -63,6 +63,6 @@ export const clientsApi = {
 
 export const operationsApi = {
   list: () => request('/operations'),
-  create: (name) => request('/operations', { method: 'POST', body: { name } }),
+  create: (name, position = null) => request('/operations', { method: 'POST', body: { name, position } }),
   remove: (id) => request(`/operations/${id}`, { method: 'DELETE' }),
 }

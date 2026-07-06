@@ -15,9 +15,9 @@ export function OperationsProvider({ children }) {
       .catch((err) => alert(err.message))
   }, [])
 
-  async function addOperation(name) {
+  async function addOperation(name, position = null) {
     try {
-      const created = await operationsApi.create(name)
+      const created = await operationsApi.create(name, position)
       setOperationsData((current) => [...current, created])
       return created
     } catch (err) {
@@ -44,7 +44,7 @@ export function OperationsProvider({ children }) {
 
   return (
     <OperationsContext.Provider
-      value={{ operations, addOperation, removeOperation }}
+      value={{ operations, operationsData, addOperation, removeOperation }}
     >
       {children}
     </OperationsContext.Provider>

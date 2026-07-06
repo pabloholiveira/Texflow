@@ -2,7 +2,12 @@ import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { getProductById, getNextStatus, getPreviousStatus } from '../db/ordersQueries.js'
+import {
+  getProductById,
+  getNextStatus,
+  getPreviousStatus,
+  findBlockingSteps,
+} from '../db/ordersQueries.js'
 
 const router = Router()
 
@@ -107,6 +112,26 @@ router.patch(
     )
     if (current.rows.length === 0) {
       return res.status(404).json({ error: 'Etapa não encontrada para este produto' })
+    }
+
+    // Gate de sequência: só trava o INÍCIO (pending -> in_progress). Uma vez
+    // iniciada, a etapa anda livre — ver modelo de "posição em camadas" no
+    // CLAUDE.md (domain model).
+    if (direction === 'forward' && current.rows[0].status === 'pending') {
+      const stepOperation = await pool.query(
+        'SELECT sequence_position FROM operations WHERE name = $1',
+        [step]
+      )
+      const stepPosition = stepOperation.rows[0]?.sequence_position
+
+      if (stepPosition != null) {
+        const blockingSteps = await findBlockingSteps(pool, id, stepPosition)
+        if (blockingSteps.length > 0) {
+          return res.status(409).json({
+            error: `Não é possível iniciar "${step}" antes de concluir: ${blockingSteps.join(', ')}`,
+          })
+        }
+      }
     }
 
     const nextStatus =

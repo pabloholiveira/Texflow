@@ -8,22 +8,32 @@ router.get(
   '/',
   asyncHandler(async (req, res) => {
     const result = await pool.query('SELECT * FROM operations ORDER BY id')
-    res.json(result.rows.map((row) => ({ id: row.id, name: row.name })))
+    res.json(
+      result.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        position: row.sequence_position,
+      }))
+    )
   })
 )
 
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const { name } = req.body
+    const { name, position = null } = req.body
     if (!name) return res.status(400).json({ error: 'name é obrigatório' })
 
     try {
       const result = await pool.query(
-        'INSERT INTO operations (name) VALUES ($1) RETURNING *',
-        [name]
+        'INSERT INTO operations (name, sequence_position) VALUES ($1, $2) RETURNING *',
+        [name, position]
       )
-      res.status(201).json({ id: result.rows[0].id, name: result.rows[0].name })
+      res.status(201).json({
+        id: result.rows[0].id,
+        name: result.rows[0].name,
+        position: result.rows[0].sequence_position,
+      })
     } catch (err) {
       if (err.code === '23505') {
         return res.status(409).json({ error: 'Essa operação já existe' })

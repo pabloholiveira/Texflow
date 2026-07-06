@@ -17,6 +17,25 @@ export function getPreviousStatus(status) {
   return 'pending'
 }
 
+// Operações na mesma sequence_position são independentes entre si — só
+// dependem de quem está numa posição menor. Steps sem operação
+// correspondente no catálogo (entradas livres de "outra operação") ou sem
+// posição definida ficam de fora da checagem, dos dois lados: nunca travam
+// e nunca são travados. Usado só para liberar o INÍCIO de uma etapa
+// (pending -> in_progress) — ver PATCH /products/:id/workflow/:step.
+export async function findBlockingSteps(db, productId, stepPosition) {
+  const result = await db.query(
+    `SELECT pws.step_name
+     FROM product_workflow_steps pws
+     JOIN operations op ON op.name = pws.step_name
+     WHERE pws.product_id = $1
+       AND op.sequence_position < $2
+       AND pws.status != 'done'`,
+    [productId, stepPosition]
+  )
+  return result.rows.map((row) => row.step_name)
+}
+
 function groupBy(rows, key) {
   return rows.reduce((acc, row) => {
     const groupKey = row[key]

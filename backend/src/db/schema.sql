@@ -69,5 +69,10 @@ CREATE TABLE product_comments (
 
 CREATE TABLE operations (
   id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE
+  name TEXT NOT NULL UNIQUE,
+  -- Camada da operação na sequência de produção (menor = mais cedo). Operações
+  -- na mesma posição não dependem umas das outras, só das de posição menor —
+  -- ver PATCH /products/:id/workflow/:step e o modelo documentado no CLAUDE.md.
+  -- NULL = fora da sequência (nunca é bloqueada, nunca bloqueia ninguém).
+  sequence_position INTEGER
 );
