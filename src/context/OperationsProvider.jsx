@@ -1,19 +1,28 @@
 import { useEffect, useState } from 'react'
 import { OperationsContext } from './operationsContext'
+import { useAuth } from './authContext'
 import { operationsApi } from '../services/api'
 
 export function OperationsProvider({ children }) {
+  const { isAuthenticated } = useAuth()
   // Guarda {id, name} internamente (precisa do id pra poder chamar DELETE
   // /operations/:id), mas expõe `operations` como string[] pra Settings,
   // Production e OperationsChecklist não precisarem mudar nada.
   const [operationsData, setOperationsData] = useState([])
 
+  // Mesma razão do OrdersProvider: só busca depois de logado, e refaz
+  // sozinho quando isAuthenticated vira true.
   useEffect(() => {
+    if (!isAuthenticated) {
+      setOperationsData([])
+      return
+    }
+
     operationsApi
       .list()
       .then(setOperationsData)
       .catch((err) => alert(err.message))
-  }, [])
+  }, [isAuthenticated])
 
   async function addOperation(name, position = null) {
     try {

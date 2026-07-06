@@ -1,16 +1,25 @@
 import { useEffect, useState } from 'react'
 import { ClientsContext } from './clientsContext'
+import { useAuth } from './authContext'
 import { clientsApi } from '../services/api'
 
 export function ClientsProvider({ children }) {
+  const { isAuthenticated } = useAuth()
   const [clients, setClients] = useState([])
 
+  // Mesma razão do OrdersProvider: só busca depois de logado, e refaz
+  // sozinho quando isAuthenticated vira true.
   useEffect(() => {
+    if (!isAuthenticated) {
+      setClients([])
+      return
+    }
+
     clientsApi
       .list()
       .then(setClients)
       .catch((err) => alert(err.message))
-  }, [])
+  }, [isAuthenticated])
 
   function upsertClient(client) {
     setClients((current) => {

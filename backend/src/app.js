@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { pool } from './db/pool.js'
+import authRouter from './routes/auth.js'
 import ordersRouter from './routes/orders.js'
 import orderProductsRouter from './routes/orderProducts.js'
 import productsRouter from './routes/products.js'
@@ -8,6 +9,7 @@ import productCommentsRouter from './routes/productComments.js'
 import productFilesRouter from './routes/productFiles.js'
 import clientsRouter from './routes/clients.js'
 import operationsRouter from './routes/operations.js'
+import { requireAuth } from './middleware/requireAuth.js'
 
 export function createApp() {
   const app = express()
@@ -23,6 +25,12 @@ export function createApp() {
       res.status(503).json({ status: 'degraded', database: 'unavailable' })
     }
   })
+
+  // /auth/login precisa ficar acessível sem estar logado (senão ninguém
+  // conseguiria logar). Tudo que vem depois do requireAuth abaixo passa a
+  // exigir um Bearer token válido.
+  app.use('/auth', authRouter)
+  app.use(requireAuth)
 
   // Path mais específico primeiro, mesma regra já seguida nas rotas do
   // front-end (App.jsx) para não deixar um path genérico "engolir" outro.

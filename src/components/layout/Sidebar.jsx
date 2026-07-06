@@ -1,6 +1,15 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/authContext'
 
 function Sidebar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <aside className="sidebar">
       <h2>TexFlow</h2>
@@ -18,6 +27,11 @@ function Sidebar() {
 
         <NavLink to="/configuracoes">Configurações</NavLink>
       </nav>
+
+      <div className="sidebar-user">
+        {user && <span>{user.username}</span>}
+        <button onClick={handleLogout}>Sair</button>
+      </div>
     </aside>
   )
 }

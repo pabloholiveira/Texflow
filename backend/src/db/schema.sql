@@ -77,6 +77,19 @@ CREATE TABLE operations (
   sequence_position INTEGER
 );
 
+-- Etapa 7 do roadmap (CLAUDE.md): login básico, sem papéis por setor ainda.
+-- role tem CHECK só com 'admin' por enquanto — dá pra virar
+-- ('admin', 'vendedora', 'producao', ...) depois sem migração estrutural,
+-- só relaxando o CHECK. password_hash nunca guarda a senha em texto puro —
+-- é gerado com bcrypt (ver backend/src/scripts/createUser.js).
+CREATE TABLE users (
+  id BIGSERIAL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin')),
+  created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
 CREATE TABLE product_files (
   id BIGSERIAL PRIMARY KEY,
   product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,

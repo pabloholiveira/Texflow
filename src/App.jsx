@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './App.css'
+import { AuthProvider } from './context/AuthProvider'
 import { OrdersProvider } from './context/OrdersProvider'
 import { ClientsProvider } from './context/ClientsProvider'
 import { OperationsProvider } from './context/OperationsProvider'
+import ProtectedRoute from './components/layout/ProtectedRoute'
 
 import Dashboard from './pages/Dashboard'
 import Orders from './pages/Orders'
@@ -16,27 +18,30 @@ import NewOrder from './pages/NewOrder'
 
 function App() {
   return (
-    <ClientsProvider>
-      <OperationsProvider>
-        <OrdersProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/login" element={<Login />} />
+    <AuthProvider>
+      <ClientsProvider>
+        <OperationsProvider>
+          <OrdersProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
 
-              <Route path="/pedidos" element={<Orders />} />
-              <Route path="/pedidos/novo" element={<NewOrder />} />
-              <Route path="/pedidos/:id" element={<OrderDetails />} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-              <Route path="/clientes" element={<Clients />} />
-              <Route path="/producao" element={<Production />} />
-              <Route path="/relatorios" element={<Reports />} />
-              <Route path="/configuracoes" element={<Settings />} />
-            </Routes>
-          </BrowserRouter>
-        </OrdersProvider>
-      </OperationsProvider>
-    </ClientsProvider>
+                <Route path="/pedidos" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/pedidos/novo" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
+                <Route path="/pedidos/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+
+                <Route path="/clientes" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+                <Route path="/producao" element={<ProtectedRoute><Production /></ProtectedRoute>} />
+                <Route path="/relatorios" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              </Routes>
+            </BrowserRouter>
+          </OrdersProvider>
+        </OperationsProvider>
+      </ClientsProvider>
+    </AuthProvider>
   )
 }
 

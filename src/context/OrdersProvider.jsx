@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { OrdersContext } from './ordersContext'
+import { useAuth } from './authContext'
 import { ordersApi, productsApi, commentsApi, filesApi } from '../services/api'
 
 // Contrato comum a todas as funções abaixo: em caso de sucesso, devolvem o
@@ -8,16 +9,29 @@ import { ordersApi, productsApi, commentsApi, filesApi } from '../services/api'
 // precisa checar `if (!resultado) return` antes de seguir em frente (fechar
 // modal, navegar, etc.) em vez de espalhar try/catch em cada tela.
 export function OrdersProvider({ children }) {
+  const { isAuthenticated } = useAuth()
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // Sem isso, este provider tentaria buscar /orders assim que o app carrega
+  // — mesmo ainda na tela de /login, sem token — e cairia num 401 (ver
+  // requireAuth no backend), disparando um alert() antes da pessoa conseguir
+  // digitar usuário/senha. Refaz a busca sozinho quando isAuthenticated vira
+  // true (login concluído), sem precisar de F5.
   useEffect(() => {
+    if (!isAuthenticated) {
+      setOrders([])
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
     ordersApi
       .list()
       .then(setOrders)
       .catch((err) => alert(err.message))
       .finally(() => setIsLoading(false))
-  }, [])
+  }, [isAuthenticated])
 
   function replaceOrder(updatedOrder) {
     setOrders((current) =>

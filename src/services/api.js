@@ -8,10 +8,16 @@ async function request(path, options = {}) {
   // o boundary do multipart/form-data.
   const isFormData = options.body instanceof FormData
 
+  const token = localStorage.getItem('texflow_token')
+
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
-      headers: isFormData ? options.headers : { 'Content-Type': 'application/json', ...options.headers },
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
       body: isFormData ? options.body : options.body ? JSON.stringify(options.body) : undefined,
     })
   } catch {
@@ -23,10 +29,23 @@ async function request(path, options = {}) {
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
+    // Sessão expirada/inválida: limpa o login guardado e manda de volta pro
+    // /login, em vez de deixar cada tela lidar com isso na mão. Não se aplica
+    // ao próprio /auth/login (ali um 401 só significa "senha errada").
+    if (response.status === 401 && path !== '/auth/login') {
+      localStorage.removeItem('texflow_token')
+      localStorage.removeItem('texflow_user')
+      window.location.href = '/login'
+    }
+
     throw new Error(data?.error || `Erro ${response.status} ao comunicar com o servidor`)
   }
 
   return data
+}
+
+export const authApi = {
+  login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
 }
 
 export const ordersApi = {
