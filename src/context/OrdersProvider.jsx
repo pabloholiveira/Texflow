@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { OrdersContext } from './ordersContext'
-import { ordersApi, productsApi, commentsApi } from '../services/api'
+import { ordersApi, productsApi, commentsApi, filesApi } from '../services/api'
 
 // Contrato comum a todas as funções abaixo: em caso de sucesso, devolvem o
 // recurso criado/atualizado; em caso de erro, mostram um alert() (mesmo
@@ -167,6 +167,30 @@ export function OrdersProvider({ children }) {
     }
   }
 
+  async function addProductFile(orderId, productId, formData) {
+    try {
+      const created = await filesApi.create(productId, formData)
+      setOrders((current) =>
+        current.map((order) =>
+          order.id !== orderId
+            ? order
+            : {
+                ...order,
+                products: order.products.map((product) =>
+                  product.id === productId
+                    ? { ...product, files: [...product.files, created] }
+                    : product
+                ),
+              }
+        )
+      )
+      return created
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
   async function toggleProductDesignRework(orderId, productId) {
     const order = orders.find((item) => item.id === orderId)
     const product = order?.products.find((item) => item.id === productId)
@@ -198,6 +222,7 @@ export function OrdersProvider({ children }) {
         updateProductWorkflow,
         moveProductStepStatus,
         addProductComment,
+        addProductFile,
         toggleProductDesignRework,
       }}
     >

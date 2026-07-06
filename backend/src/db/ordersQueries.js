@@ -54,7 +54,19 @@ export function mapComment(commentRow) {
   }
 }
 
-export function mapProduct(productRow, workflowRows = [], commentRows = []) {
+export function mapFile(fileRow) {
+  return {
+    id: fileRow.id,
+    category: fileRow.category,
+    fileName: fileRow.file_name,
+    fileUrl: fileRow.file_url,
+    fileType: fileRow.file_type,
+    uploadedBy: fileRow.uploaded_by,
+    createdAt: fileRow.created_at,
+  }
+}
+
+export function mapProduct(productRow, workflowRows = [], commentRows = [], fileRows = []) {
   return {
     id: productRow.id,
     orderId: productRow.order_id,
@@ -74,6 +86,7 @@ export function mapProduct(productRow, workflowRows = [], commentRows = []) {
     // decisão de exibição do ProductCard (`.slice().reverse()`), não algo
     // que a API precisa devolver já invertido.
     comments: commentRows.map(mapComment),
+    files: fileRows.map(mapFile),
   }
 }
 
@@ -125,8 +138,16 @@ export async function fetchOrders(whereSql = '', params = []) {
       )
     : { rows: [] }
 
+  const filesResult = productIds.length
+    ? await pool.query(
+        'SELECT * FROM product_files WHERE product_id = ANY($1::bigint[]) ORDER BY created_at',
+        [productIds]
+      )
+    : { rows: [] }
+
   const workflowByProduct = groupBy(workflowResult.rows, 'product_id')
   const commentsByProduct = groupBy(commentsResult.rows, 'product_id')
+  const filesByProduct = groupBy(filesResult.rows, 'product_id')
   const productsByOrder = groupBy(products, 'order_id')
 
   return orders.map((order) =>
@@ -136,16 +157,18 @@ export async function fetchOrders(whereSql = '', params = []) {
         mapProduct(
           product,
           workflowByProduct[product.id] || [],
-          commentsByProduct[product.id] || []
+          commentsByProduct[product.id] || [],
+          filesByProduct[product.id] || []
         )
       )
     )
   )
 }
 
-// Busca um único produto (com workflow e comentários) — usado depois de
-// criar/editar um produto, para devolver o estado atualizado. Aceita tanto
-// `pool` quanto um `client` de transação, já que os dois expõem `.query`.
+// Busca um único produto (com workflow, comentários e arquivos) — usado
+// depois de criar/editar um produto, para devolver o estado atualizado.
+// Aceita tanto `pool` quanto um `client` de transação, já que os dois
+// expõem `.query`.
 export async function getProductById(db, productId) {
   const productResult = await db.query('SELECT * FROM products WHERE id = $1', [productId])
   if (productResult.rows.length === 0) return null
@@ -158,6 +181,15 @@ export async function getProductById(db, productId) {
     'SELECT * FROM product_comments WHERE product_id = $1 ORDER BY created_at',
     [productId]
   )
+  const filesResult = await db.query(
+    'SELECT * FROM product_files WHERE product_id = $1 ORDER BY created_at',
+    [productId]
+  )
 
-  return mapProduct(productResult.rows[0], workflowResult.rows, commentsResult.rows)
+  return mapProduct(
+    productResult.rows[0],
+    workflowResult.rows,
+    commentsResult.rows,
+    filesResult.rows
+  )
 }

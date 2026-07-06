@@ -16,7 +16,7 @@ function getOverallStatus(workflow) {
   return { key: 'pending', label: 'Não iniciado' }
 }
 
-function ProductCard({ product, onRemove, onEdit, onOpenComments }) {
+function ProductCard({ product, onRemove, onEdit, onOpenComments, onOpenFiles }) {
   const overallStatus = getOverallStatus(product.workflow)
 
   return (
@@ -79,6 +79,10 @@ function ProductCard({ product, onRemove, onEdit, onOpenComments }) {
 
         <Button variant="secondary" onClick={() => onOpenComments(product)}>
           Comentários{product.comments?.length > 0 ? ` (${product.comments.length})` : ''}
+        </Button>
+
+        <Button variant="secondary" onClick={() => onOpenFiles(product)}>
+          Arquivos{product.files?.length > 0 ? ` (${product.files.length})` : ''}
         </Button>
 
         <Button variant="danger" onClick={() => onRemove(product.id)}>

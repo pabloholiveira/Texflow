@@ -5,6 +5,7 @@ import ordersRouter from './routes/orders.js'
 import orderProductsRouter from './routes/orderProducts.js'
 import productsRouter from './routes/products.js'
 import productCommentsRouter from './routes/productComments.js'
+import productFilesRouter from './routes/productFiles.js'
 import clientsRouter from './routes/clients.js'
 import operationsRouter from './routes/operations.js'
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/orders/:orderId/products', orderProductsRouter)
   app.use('/orders', ordersRouter)
   app.use('/products/:productId/comments', productCommentsRouter)
+  app.use('/products/:productId/files', productFilesRouter)
   app.use('/products', productsRouter)
   app.use('/clients', clientsRouter)
   app.use('/operations', operationsRouter)

@@ -37,6 +37,9 @@ function OrderDetails() {
     goToOperationsStep,
     goToInfoStep,
     saveNewProduct,
+    referenceFiles,
+    addReferenceFile,
+    removeReferenceFile,
     removeProduct,
     isEditModalOpen,
     openEditModal,
@@ -49,6 +52,14 @@ function OrderDetails() {
     openCommentsModal,
     closeCommentsModal,
     addComment,
+    isFilesModalOpen,
+    filesProduct,
+    fileDraft,
+    handleFileDraftChange,
+    handleFileSelect,
+    openFilesModal,
+    closeFilesModal,
+    uploadFile,
   } = useProductList(id)
 
   if (isLoading) {
@@ -140,6 +151,7 @@ function OrderDetails() {
             onRemove={removeProduct}
             onEdit={openEditModal}
             onOpenComments={openCommentsModal}
+            onOpenFiles={openFilesModal}
           />
         ))}
       </section>
@@ -152,6 +164,30 @@ function OrderDetails() {
         {addStep === 'info' && (
           <>
             <ProductFields product={product} onChange={handleChange} />
+
+            <div className="input-group">
+              <label>Referências (fotos, logo do cliente, tom de tecido)</label>
+              <input
+                type="file"
+                onChange={(event) => {
+                  if (event.target.files[0]) addReferenceFile(event.target.files[0])
+                  event.target.value = ''
+                }}
+              />
+            </div>
+
+            {referenceFiles.length > 0 && (
+              <ul className="reference-files-list">
+                {referenceFiles.map((file, index) => (
+                  <li key={`${file.name}-${index}`}>
+                    {file.name}
+                    <button type="button" onClick={() => removeReferenceFile(index)}>
+                      Remover
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="modal-actions">
               <Button variant="secondary" onClick={closeAddModal}>
@@ -256,6 +292,61 @@ function OrderDetails() {
             Fechar
           </Button>
           <Button onClick={addComment}>Adicionar Comentário</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isFilesModalOpen}
+        onClose={closeFilesModal}
+        title={filesProduct ? `Arquivos — ${filesProduct.type}` : 'Arquivos'}
+      >
+        <div className="comments-list">
+          {(!filesProduct?.files || filesProduct.files.length === 0) && (
+            <p>Nenhum arquivo ainda.</p>
+          )}
+
+          {filesProduct?.files?.map((file) => (
+            <div className="comment-item" key={file.id}>
+              <div className="comment-item-header">
+                <strong>
+                  <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                    {file.fileName}
+                  </a>
+                </strong>
+                <span>
+                  {file.category === 'referencia' ? 'Referência' : 'Layout aprovado'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="input-group">
+          <label>Categoria</label>
+          <select name="category" value={fileDraft.category} onChange={handleFileDraftChange}>
+            <option value="referencia">Referência</option>
+            <option value="layout_aprovado">Layout aprovado</option>
+          </select>
+        </div>
+
+        <Input
+          label="Enviado por"
+          placeholder="Seu nome"
+          name="uploadedBy"
+          value={fileDraft.uploadedBy}
+          onChange={handleFileDraftChange}
+        />
+
+        <div className="input-group">
+          <label>Arquivo</label>
+          <input type="file" onChange={handleFileSelect} />
+        </div>
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={closeFilesModal}>
+            Fechar
+          </Button>
+          <Button onClick={uploadFile}>Enviar Arquivo</Button>
         </div>
       </Modal>
     </Layout>

@@ -76,3 +76,19 @@ CREATE TABLE operations (
   -- NULL = fora da sequência (nunca é bloqueada, nunca bloqueia ninguém).
   sequence_position INTEGER
 );
+
+CREATE TABLE product_files (
+  id BIGSERIAL PRIMARY KEY,
+  product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  -- 'referencia' = material recebido na venda (fotos, logo, tom de tecido),
+  -- disponível já no cadastro do produto; 'layout_aprovado' = PDF do mockup
+  -- aprovado pelo cliente, consultado pela produção depois. TEXT + CHECK, não
+  -- ENUM, mesma razão de stage/status acima. Sem FK pra um catálogo — só duas
+  -- categorias fixas, não justifica uma tabela própria.
+  category TEXT NOT NULL CHECK (category IN ('referencia', 'layout_aprovado')),
+  file_name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  file_type TEXT,
+  uploaded_by TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT now()
+);
