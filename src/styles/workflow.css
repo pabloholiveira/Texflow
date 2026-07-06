@@ -1,0 +1,99 @@
+.operations-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.operation-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.operation-custom {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.operation-custom input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.product-workflow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.workflow-chip {
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workflow-chip-pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.workflow-chip-in_progress {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.workflow-chip-done {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.stage-tracker {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stage-tracker-list,
+.stage-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stage-chip {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stage-chip-completed {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.stage-chip-current {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.stage-chip-pending {
+  background: #f3f4f6;
+  color: #9ca3af;
+}

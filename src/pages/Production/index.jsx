@@ -1,0 +1,237 @@
+import { useState } from 'react'
+import Layout from '../../components/layout/Layout'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
+import { useOrders } from '../../context/ordersContext'
+import { useOperations } from '../../context/operationsContext'
+
+const STATUS_COLUMNS = [
+  { key: 'pending', label: 'Pendente' },
+  { key: 'in_progress', label: 'Em andamento' },
+  { key: 'done', label: 'Concluído' },
+]
+
+function getStatusLabel(status) {
+  return STATUS_COLUMNS.find((column) => column.key === status)?.label
+}
+
+function Production() {
+  const { orders, moveProductStepStatus, toggleProductDesignRework } =
+    useOrders()
+  const { operations } = useOperations()
+  const [detailTarget, setDetailTarget] = useState(null)
+
+  // `operations` chega vazio no primeiro render (ainda buscando da API), e
+  // `useState(operations[0])` só usaria esse valor inicial uma vez — por
+  // isso a aba ativa é derivada no render (com fallback pra primeira
+  // operação) em vez de guardada como seu próprio estado sincronizado.
+  const [manuallySelectedOperation, setManuallySelectedOperation] = useState(null)
+  const selectedOperation = manuallySelectedOperation ?? operations[0]
+
+  const allProducts = orders
+    .filter((order) => !order.isDraft && order.stage === 'producao')
+    .flatMap((order) =>
+      order.products.map((product) => ({
+        ...product,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+      }))
+    )
+
+  function openDetail(orderId, productId) {
+    setDetailTarget({ orderId, productId })
+  }
+
+  function closeDetail() {
+    setDetailTarget(null)
+  }
+
+  const itemsForOperation = allProducts
+    .map((product) => ({
+      product,
+      stage: product.workflow.find((stage) => stage.step === selectedOperation),
+    }))
+    .filter((item) => item.stage)
+
+  const detailProduct = detailTarget
+    ? allProducts.find(
+        (product) =>
+          product.orderId === detailTarget.orderId &&
+          product.id === detailTarget.productId
+      )
+    : null
+
+  return (
+    <Layout>
+      <div className="page-header">
+        <div>
+          <h1>Produção</h1>
+          <p>Acompanhe o andamento de cada operação</p>
+        </div>
+      </div>
+
+      <div className="tabs">
+        {operations.map((operation) => (
+          <button
+            key={operation}
+            className={operation === selectedOperation ? 'active' : ''}
+            onClick={() => setManuallySelectedOperation(operation)}
+          >
+            {operation}
+          </button>
+        ))}
+      </div>
+
+      <div className="kanban-board">
+        {STATUS_COLUMNS.map((column) => {
+          const columnItems = itemsForOperation.filter(
+            (item) => item.stage.status === column.key
+          )
+
+          return (
+            <div className="kanban-column" key={column.key}>
+              <h2>{column.label}</h2>
+
+              {columnItems.length === 0 && (
+                <p className="kanban-empty">Nenhum produto aqui</p>
+              )}
+
+              {columnItems.map((item) => (
+                <div
+                  className="kanban-card"
+                  key={`${item.product.orderId}-${item.product.id}`}
+                >
+                  <button
+                    className="kanban-card-title"
+                    onClick={() =>
+                      openDetail(item.product.orderId, item.product.id)
+                    }
+                  >
+                    {item.product.type} — {item.product.model}
+                  </button>
+
+                  <p>{item.product.orderNumber}</p>
+
+                  {item.product.needsDesignRework && (
+                    <span className="rework-badge">Retrabalho de design</span>
+                  )}
+
+                  <div className="kanban-card-actions">
+                    {column.key !== 'pending' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          moveProductStepStatus(
+                            item.product.orderId,
+                            item.product.id,
+                            selectedOperation,
+                            'backward'
+                          )
+                        }
+                      >
+                        Voltar
+                      </Button>
+                    )}
+
+                    {column.key !== 'done' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          moveProductStepStatus(
+                            item.product.orderId,
+                            item.product.id,
+                            selectedOperation,
+                            'forward'
+                          )
+                        }
+                      >
+                        {column.key === 'pending' ? 'Iniciar' : 'Concluir'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+
+      <Modal
+        isOpen={!!detailProduct}
+        onClose={closeDetail}
+        title={
+          detailProduct
+            ? `${detailProduct.type} — ${detailProduct.orderNumber}`
+            : ''
+        }
+      >
+        {detailProduct && (
+          <>
+            <div className="product-detail-workflow">
+              {detailProduct.workflow.map((stage) => (
+                <div className="product-detail-stage" key={stage.step}>
+                  <div>
+                    <strong>{stage.step}</strong>
+                    <span
+                      className={`workflow-chip workflow-chip-${stage.status}`}
+                    >
+                      {getStatusLabel(stage.status)}
+                    </span>
+                  </div>
+
+                  <div className="product-detail-stage-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        moveProductStepStatus(
+                          detailProduct.orderId,
+                          detailProduct.id,
+                          stage.step,
+                          'backward'
+                        )
+                      }
+                      disabled={stage.status === 'pending'}
+                    >
+                      Voltar
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        moveProductStepStatus(
+                          detailProduct.orderId,
+                          detailProduct.id,
+                          stage.step,
+                          'forward'
+                        )
+                      }
+                      disabled={stage.status === 'done'}
+                    >
+                      Avançar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <label className="rework-flag">
+              <input
+                type="checkbox"
+                checked={!!detailProduct.needsDesignRework}
+                onChange={() =>
+                  toggleProductDesignRework(
+                    detailProduct.orderId,
+                    detailProduct.id
+                  )
+                }
+              />
+              Precisa retrabalho de design
+            </label>
+          </>
+        )}
+      </Modal>
+    </Layout>
+  )
+}
+
+export default Production

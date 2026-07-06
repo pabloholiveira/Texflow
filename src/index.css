@@ -1,0 +1,15 @@
+@import "./styles/variables.css";
+@import "./styles/global.css";
+@import "./styles/layout.css";
+@import "./styles/sidebar.css";
+@import "./styles/dashboard.css";
+@import "./styles/orders.css";
+@import "./styles/forms.css";
+@import "./styles/products.css";
+@import "./styles/buttons.css";
+@import "./styles/workflow.css";
+@import "./styles/modal.css";
+@import "./styles/production.css";
+@import "./styles/clients.css";
+@import "./styles/comments.css";
+@import "./styles/settings.css";

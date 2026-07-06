@@ -1,0 +1,38 @@
+.comments-hint {
+  color: #9ca3af;
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.comment-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.comment-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.comment-item-header span {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.comment-item p {
+  margin: 0;
+  font-size: 14px;
+}

@@ -1,0 +1,109 @@
+.tabs button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.kanban-column {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.kanban-column h2 {
+  margin-top: 0;
+  font-size: 15px;
+}
+
+.kanban-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.kanban-card p {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 4px 0 10px;
+}
+
+.kanban-card-title {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: 15px;
+  font-weight: bold;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kanban-card-title:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+.kanban-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.kanban-empty {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.rework-badge {
+  display: inline-block;
+  background: #fff7ed;
+  color: #c2410c;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.product-detail-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.product-detail-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.product-detail-stage strong {
+  margin-right: 10px;
+}
+
+.product-detail-stage-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rework-flag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  font-weight: 500;
+}

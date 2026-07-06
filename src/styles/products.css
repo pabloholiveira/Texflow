@@ -1,0 +1,64 @@
+.products-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.products-panel-header h2 {
+  margin: 0;
+}
+
+.product-status {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.product-status-pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.product-status-progress {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.product-status-done {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.suggestible-input {
+  position: relative;
+}
+
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.suggestion-item {
+  background: white;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: #f3f4f6;
+}
