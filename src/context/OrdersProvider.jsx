@@ -17,15 +17,14 @@ export function OrdersProvider({ children }) {
   // — mesmo ainda na tela de /login, sem token — e cairia num 401 (ver
   // requireAuth no backend), disparando um alert() antes da pessoa conseguir
   // digitar usuário/senha. Refaz a busca sozinho quando isAuthenticated vira
-  // true (login concluído), sem precisar de F5.
+  // true (login concluído), sem precisar de F5. Não reseta `orders` no ramo
+  // "não autenticado" — chamar setState direto no corpo do efeito (fora de
+  // uma promise) é o que o lint react-hooks/set-state-in-effect reclama;
+  // como o ProtectedRoute já esconde a tela antes disso importar, não faz
+  // diferença deixar os dados antigos ali até o próximo fetch real.
   useEffect(() => {
-    if (!isAuthenticated) {
-      setOrders([])
-      setIsLoading(false)
-      return
-    }
+    if (!isAuthenticated) return
 
-    setIsLoading(true)
     ordersApi
       .list()
       .then(setOrders)

@@ -11,12 +11,10 @@ export function OperationsProvider({ children }) {
   const [operationsData, setOperationsData] = useState([])
 
   // Mesma razão do OrdersProvider: só busca depois de logado, e refaz
-  // sozinho quando isAuthenticated vira true.
+  // sozinho quando isAuthenticated vira true. Não reseta `operationsData` no
+  // ramo "não autenticado" (ver comentário equivalente em OrdersProvider).
   useEffect(() => {
-    if (!isAuthenticated) {
-      setOperationsData([])
-      return
-    }
+    if (!isAuthenticated) return
 
     operationsApi
       .list()

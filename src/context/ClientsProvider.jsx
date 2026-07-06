@@ -8,12 +8,10 @@ export function ClientsProvider({ children }) {
   const [clients, setClients] = useState([])
 
   // Mesma razão do OrdersProvider: só busca depois de logado, e refaz
-  // sozinho quando isAuthenticated vira true.
+  // sozinho quando isAuthenticated vira true. Não reseta `clients` no ramo
+  // "não autenticado" (ver comentário equivalente em OrdersProvider).
   useEffect(() => {
-    if (!isAuthenticated) {
-      setClients([])
-      return
-    }
+    if (!isAuthenticated) return
 
     clientsApi
       .list()
