@@ -344,18 +344,6 @@ button:hover {
   color: #6b7280;
 }
 
-.production-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.production-flow span {
-  background: #f3f4f6;
-  border-radius: 8px;
-  padding: 12px;
-  font-weight: 600;
-}
 
 .orders-list {
   display: flex;

@@ -1,4 +1,15 @@
+.production-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.production-flow span,
 .production-flow a {
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 600;
   color: inherit;
   text-decoration: none;
 }
