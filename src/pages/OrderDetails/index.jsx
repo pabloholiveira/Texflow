@@ -19,6 +19,7 @@ import {
 } from '../../data/orderStages'
 import { getClientDisplayName } from '../../data/clients'
 import { formatCurrency } from '../../utils/currency'
+import { buildWhatsAppMessage, buildWhatsAppLink } from '../../utils/whatsapp'
 
 function OrderDetails() {
   const { id } = useParams()
@@ -40,6 +41,13 @@ function OrderDetails() {
       amountPaid: amountPaidDraft === '' ? 0 : Number(amountPaidDraft),
     })
     if (updated) setIsPaymentModalOpen(false)
+  }
+
+  // Só abre um link wa.me pré-preenchido — envio continua manual, sem API
+  // oficial do WhatsApp Business (item 4 do roadmap comercial).
+  function handleSendWhatsApp() {
+    const message = buildWhatsAppMessage(order, products)
+    window.open(buildWhatsAppLink(client.phone, message), '_blank')
   }
 
   const {
@@ -110,7 +118,14 @@ function OrderDetails() {
           <p>{getClientDisplayName(client)}</p>
         </div>
 
-        <button>Editar Pedido</button>
+        <div className="page-header-actions">
+          {client?.phone && (
+            <Button variant="secondary" onClick={handleSendWhatsApp}>
+              Enviar por WhatsApp
+            </Button>
+          )}
+          <button>Editar Pedido</button>
+        </div>
       </div>
 
       <section className="order-info">
