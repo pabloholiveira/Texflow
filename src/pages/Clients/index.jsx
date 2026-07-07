@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
 import ClientFields from '../../components/ui/ClientFields'
 import { useClients } from '../../context/clientsContext'
@@ -33,6 +34,18 @@ function Clients() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [client, setClient] = useState(emptyClient)
+  const [search, setSearch] = useState('')
+
+  // Mesmo critério de busca do ClientAutocomplete (Novo Pedido): nome,
+  // empresa ou CPF/CNPJ — não repete essa lógica diferente aqui.
+  const query = search.trim().toLowerCase()
+  const visibleClients = query
+    ? clients.filter((item) =>
+        [item.personName, item.companyName, item.document]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(query))
+      )
+    : clients
 
   // Guarda só o id, não uma cópia do cliente — assim, depois de editar, o
   // modal de detalhes já reflete o dado novo sozinho (lido de volta de
@@ -146,8 +159,18 @@ function Clients() {
         <Button onClick={openModal}>Adicionar Cliente</Button>
       </div>
 
+      <Input
+        label="Buscar cliente"
+        placeholder="Nome, empresa ou CPF/CNPJ"
+        name="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+
+      {query && visibleClients.length === 0 && <p>Nenhum cliente encontrado.</p>}
+
       <section className="clients-list">
-        {clients.map((item) => {
+        {visibleClients.map((item) => {
           const clientOrders = finalizedOrders.filter(
             (order) => order.clientId === item.id
           )
