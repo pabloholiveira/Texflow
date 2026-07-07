@@ -87,6 +87,7 @@ export const filesApi = {
 export const clientsApi = {
   list: () => request('/clients'),
   create: (client) => request('/clients', { method: 'POST', body: client }),
+  update: (id, fields) => request(`/clients/${id}`, { method: 'PATCH', body: fields }),
   findOrCreate: (client) => request('/clients/find-or-create', { method: 'POST', body: client }),
 }
 

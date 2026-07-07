@@ -39,6 +39,17 @@ export function ClientsProvider({ children }) {
     }
   }
 
+  async function updateClient(id, fields) {
+    try {
+      const updated = await clientsApi.update(id, fields)
+      upsertClient(updated)
+      return updated
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
   // Espelha o findOrCreateClient de antes: casa só por `document`, cria se
   // não achar. Continua devolvendo só o id (mesmo contrato de antes) porque
   // é só isso que NewOrder precisa pra montar { clientId }.
@@ -54,7 +65,7 @@ export function ClientsProvider({ children }) {
   }
 
   return (
-    <ClientsContext.Provider value={{ clients, addClient, findOrCreateClient }}>
+    <ClientsContext.Provider value={{ clients, addClient, updateClient, findOrCreateClient }}>
       {children}
     </ClientsContext.Provider>
   )

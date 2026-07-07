@@ -33,6 +33,47 @@ router.get(
   })
 )
 
+router.patch(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const columnMap = {
+      personName: 'person_name',
+      companyName: 'company_name',
+      document: 'document',
+      phone: 'phone',
+      email: 'email',
+    }
+    const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Nenhum campo válido para atualizar' })
+    }
+
+    const setClause = updates
+      .map(([key], index) => `${columnMap[key]} = $${index + 1}`)
+      .join(', ')
+    const values = updates.map(([, value]) => value)
+
+    try {
+      const result = await pool.query(
+        `UPDATE clients SET ${setClause} WHERE id = $${values.length + 1} RETURNING *`,
+        [...values, req.params.id]
+      )
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Cliente não encontrado' })
+      }
+      res.json(mapClient(result.rows[0]))
+    } catch (err) {
+      // Mesma regra do POST: document tem UNIQUE no banco, então editar pro
+      // documento de outro cliente já cadastrado cai aqui.
+      if (err.code === '23505') {
+        return res.status(409).json({ error: 'Já existe um cliente com este documento' })
+      }
+      throw err
+    }
+  })
+)
+
 router.post(
   '/',
   asyncHandler(async (req, res) => {

@@ -62,6 +62,33 @@
   background: #e5e7eb;
 }
 
+.client-card-actions {
+  margin-top: 14px;
+}
+
+.client-order-history-item {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.client-order-history-item > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.client-order-history-item span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.client-order-history-item p {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
 .client-autocomplete-suggestions {
   display: flex;
   flex-direction: column;
