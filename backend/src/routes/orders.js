@@ -55,7 +55,7 @@ router.post(
 router.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const columnMap = { clientId: 'client_id', deadline: 'deadline' }
+    const columnMap = { clientId: 'client_id', deadline: 'deadline', amountPaid: 'amount_paid' }
     const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
 
     if (updates.length === 0) {

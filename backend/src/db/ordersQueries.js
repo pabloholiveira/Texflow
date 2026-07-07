@@ -128,6 +128,7 @@ export function mapOrder(orderRow, products = []) {
     stage: orderRow.stage,
     isDraft: orderRow.is_draft,
     totalValue: toNumber(orderRow.total_value),
+    amountPaid: toNumber(orderRow.amount_paid),
     createdAt: orderRow.created_at,
     updatedAt: orderRow.updated_at,
     products,

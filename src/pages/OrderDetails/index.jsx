@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
@@ -7,6 +8,7 @@ import OperationsChecklist from '../../components/ui/OperationsChecklist'
 import Textarea from '../../components/ui/Textarea'
 import ProductCard from '../../components/ui/ProductCard'
 import ProductFields from '../../components/ui/ProductFields'
+import PaymentFields from '../../components/ui/PaymentFields'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
@@ -20,10 +22,25 @@ import { formatCurrency } from '../../utils/currency'
 
 function OrderDetails() {
   const { id } = useParams()
-  const { orders, isLoading, advanceOrderStage } = useOrders()
+  const { orders, isLoading, advanceOrderStage, updateOrderInfo } = useOrders()
   const { clients } = useClients()
   const order = orders.find((item) => item.id === id)
   const client = order && clients.find((item) => item.id === order.clientId)
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [amountPaidDraft, setAmountPaidDraft] = useState(0)
+
+  function openPaymentModal() {
+    setAmountPaidDraft(order.amountPaid)
+    setIsPaymentModalOpen(true)
+  }
+
+  async function confirmPayment() {
+    const updated = await updateOrderInfo(order.id, {
+      amountPaid: amountPaidDraft === '' ? 0 : Number(amountPaidDraft),
+    })
+    if (updated) setIsPaymentModalOpen(false)
+  }
 
   const {
     products,
@@ -115,6 +132,22 @@ function OrderDetails() {
         <div>
           <span>Valor total</span>
           <strong>{formatCurrency(order.totalValue)}</strong>
+        </div>
+
+        <div>
+          <span>Valor pago</span>
+          <strong>{formatCurrency(order.amountPaid)}</strong>
+        </div>
+
+        <div>
+          <span>Falta pagar</span>
+          <strong>{formatCurrency(Math.max(order.totalValue - order.amountPaid, 0))}</strong>
+        </div>
+
+        <div>
+          <Button variant="secondary" onClick={openPaymentModal}>
+            Registrar Pagamento
+          </Button>
         </div>
       </section>
 
@@ -254,6 +287,25 @@ function OrderDetails() {
             Cancelar
           </Button>
           <Button onClick={saveInfoEdit}>Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        title="Registrar Pagamento"
+      >
+        <PaymentFields
+          totalValue={order.totalValue}
+          amountPaid={amountPaidDraft}
+          onChange={(event) => setAmountPaidDraft(event.target.value)}
+        />
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setIsPaymentModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={confirmPayment}>Salvar</Button>
         </div>
       </Modal>
 

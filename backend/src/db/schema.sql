@@ -39,6 +39,12 @@ CREATE TABLE orders (
   -- remoção de produto, via recalculateOrderTotal (ordersQueries.js).
   -- Registro de valor de venda pra controle interno, não é faturamento.
   total_value NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  -- Item 3 do roadmap comercial (CLAUDE.md): capturado ao clicar em
+  -- "Finalizar Pedido" (pago tudo/metade/outro valor, sempre como número —
+  -- sem categoria separada, "quanto falta" é sempre total_value - amount_paid)
+  -- e editável depois, via PATCH /orders/:id, pra registrar o restante pago
+  -- na retirada.
+  amount_paid NUMERIC(10, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT now(),
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );

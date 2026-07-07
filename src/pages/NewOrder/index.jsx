@@ -9,6 +9,7 @@ import OperationsChecklist from '../../components/ui/OperationsChecklist'
 import Textarea from '../../components/ui/Textarea'
 import ClientAutocomplete from '../../components/ui/ClientAutocomplete'
 import ProductFields from '../../components/ui/ProductFields'
+import PaymentFields from '../../components/ui/PaymentFields'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
@@ -29,6 +30,8 @@ function NewOrder() {
   const [orderId, setOrderId] = useState(null)
   const hasCreatedOrder = useRef(false)
   const [clientDraft, setClientDraft] = useState(emptyClient)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [amountPaidDraft, setAmountPaidDraft] = useState(0)
 
   // StrictMode invokes effects twice in dev to catch impure side effects;
   // this guard keeps createOrder() from running twice and creating a duplicate order.
@@ -91,7 +94,10 @@ function NewOrder() {
     updateOrderInfo(orderId, { [name]: value })
   }
 
-  async function handleFinalizeOrder() {
+  // Só valida cliente/produtos e abre o modal de pagamento — finalizar de
+  // verdade só acontece em confirmFinalizeOrder, depois que a pessoa
+  // registrar quanto foi pago (item 3 do roadmap comercial).
+  function handleFinalizeClick() {
     if (!clientDraft.personName) {
       alert('Preencha o nome do cliente antes de finalizar o pedido.')
       return
@@ -112,12 +118,24 @@ function NewOrder() {
       return
     }
 
+    setAmountPaidDraft(0)
+    setIsPaymentModalOpen(true)
+  }
+
+  function handlePaymentDraftChange(event) {
+    setAmountPaidDraft(event.target.value)
+  }
+
+  async function confirmFinalizeOrder() {
     // Cada passo só segue se o anterior deu certo — se algum falhar, o
     // Provider já mostrou o alert() com o motivo, então só paramos aqui.
     const clientId = await findOrCreateClient(clientDraft)
     if (!clientId) return
 
-    const updated = await updateOrderInfo(orderId, { clientId })
+    const updated = await updateOrderInfo(orderId, {
+      clientId,
+      amountPaid: amountPaidDraft === '' ? 0 : Number(amountPaidDraft),
+    })
     if (!updated) return
 
     const finalized = await finalizeOrder(orderId)
@@ -187,7 +205,7 @@ function NewOrder() {
 
       <section className="finalize-order">
         <span>Valor total: {formatCurrency(order.totalValue)}</span>
-        <Button onClick={handleFinalizeOrder}>Finalizar Pedido</Button>
+        <Button onClick={handleFinalizeClick}>Finalizar Pedido</Button>
       </section>
 
       <Modal
@@ -275,6 +293,25 @@ function NewOrder() {
             Cancelar
           </Button>
           <Button onClick={saveInfoEdit}>Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        title="Pagamento"
+      >
+        <PaymentFields
+          totalValue={order.totalValue}
+          amountPaid={amountPaidDraft}
+          onChange={handlePaymentDraftChange}
+        />
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setIsPaymentModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={confirmFinalizeOrder}>Confirmar e Finalizar</Button>
         </div>
       </Modal>
 
