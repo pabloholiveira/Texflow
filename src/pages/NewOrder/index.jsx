@@ -25,7 +25,7 @@ const emptyClient = {
 
 function NewOrder() {
   const navigate = useNavigate()
-  const { orders, createOrder, finalizeOrder, updateOrderInfo } = useOrders()
+  const { orders, isLoading, createOrder, finalizeOrder, updateOrderInfo } = useOrders()
   const { clients, findOrCreateClient } = useClients()
   const [orderId, setOrderId] = useState(null)
   const hasCreatedOrder = useRef(false)
@@ -35,13 +35,24 @@ function NewOrder() {
 
   // StrictMode invokes effects twice in dev to catch impure side effects;
   // this guard keeps createOrder() from running twice and creating a duplicate order.
+  //
+  // Espera isLoading virar false antes de criar: ao abrir /pedidos/novo por
+  // um carregamento de página cheio (não uma navegação client-side), o
+  // OrdersProvider começa a buscar GET /orders no mesmo instante em que este
+  // efeito dispararia o POST /orders — se a resposta do GET (que ainda não
+  // inclui o rascunho recém-criado) chegar DEPOIS do POST, ela sobrescreve
+  // `orders` no estado e apaga o rascunho, travando a tela em "Preparando
+  // novo pedido..." pra sempre. Esperar a busca inicial terminar primeiro
+  // garante a ordem (busca sempre antes de criar), eliminando a corrida em
+  // vez de só torcer pra ela não acontecer.
   useEffect(() => {
     if (hasCreatedOrder.current) return
+    if (isLoading) return
     hasCreatedOrder.current = true
     createOrder().then((id) => {
       if (id) setOrderId(id)
     })
-  }, [createOrder])
+  }, [createOrder, isLoading])
 
   const order = orders.find((item) => item.id === orderId)
 
