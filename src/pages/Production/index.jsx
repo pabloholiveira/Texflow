@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
@@ -20,12 +21,17 @@ function Production() {
     useOrders()
   const { operations } = useOperations()
   const [detailTarget, setDetailTarget] = useState(null)
+  const [searchParams] = useSearchParams()
 
   // `operations` chega vazio no primeiro render (ainda buscando da API), e
   // `useState(operations[0])` só usaria esse valor inicial uma vez — por
   // isso a aba ativa é derivada no render (com fallback pra primeira
   // operação) em vez de guardada como seu próprio estado sincronizado.
-  const [manuallySelectedOperation, setManuallySelectedOperation] = useState(null)
+  // O valor inicial vem de "?operacao=" na URL quando existe (link vindo do
+  // Dashboard) — se não vier ninguém, cai no fallback de sempre.
+  const [manuallySelectedOperation, setManuallySelectedOperation] = useState(
+    searchParams.get('operacao')
+  )
   const selectedOperation = manuallySelectedOperation ?? operations[0]
 
   const allProducts = orders

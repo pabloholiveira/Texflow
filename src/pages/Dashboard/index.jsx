@@ -51,6 +51,17 @@ function Dashboard() {
 
   const allProducts = activeOrders.flatMap((order) => order.products)
 
+  function countInProgress(operation) {
+    return allProducts.filter((product) =>
+      product.workflow.some((step) => step.step === operation && step.status === 'in_progress')
+    ).length
+  }
+
+  // Venda/Design/Aprovação são estágios do pedido (order.stage), não
+  // operações — não têm um equivalente em Produção pra filtrar, então só
+  // mostram a contagem, sem virar link (ao contrário das operações abaixo).
+  const ordersInStage = (stage) => activeOrders.filter((order) => order.stage === stage).length
+
   return (
     <Layout>
       <div className="page-header">
@@ -88,15 +99,7 @@ function Dashboard() {
         {operations.map((operation) => (
           <div className="dashboard-card" key={operation}>
             <span>Em {operation}</span>
-            <strong>
-              {
-                allProducts.filter((product) =>
-                  product.workflow.some(
-                    (step) => step.step === operation && step.status === 'in_progress'
-                  )
-                ).length
-              }
-            </strong>
+            <strong>{countInProgress(operation)}</strong>
           </div>
         ))}
       </section>
@@ -122,11 +125,13 @@ function Dashboard() {
           <h2>Fluxo da produção</h2>
 
           <div className="production-flow">
-            <span>Venda</span>
-            <span>Design</span>
-            <span>Aprovação</span>
+            <span>Venda ({ordersInStage('venda')})</span>
+            <span>Design ({ordersInStage('design')})</span>
+            <span>Aprovação ({ordersInStage('aprovacao')})</span>
             {operations.map((operation) => (
-              <span key={operation}>{operation}</span>
+              <Link key={operation} to={`/producao?operacao=${encodeURIComponent(operation)}`}>
+                {operation} ({countInProgress(operation)})
+              </Link>
             ))}
           </div>
         </div>
