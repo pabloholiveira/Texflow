@@ -21,6 +21,8 @@ router.post(
       observations,
       operations = [],
       unitPrice = null,
+      needsVectorization = false,
+      vectorizationPrice = null,
     } = req.body
 
     if (!type || !quantity) {
@@ -32,9 +34,21 @@ router.post(
       if (orderCheck.rows.length === 0) return null
 
       const inserted = await client.query(
-        `INSERT INTO products (order_id, type, model, color, fabric, quantity, observations, unit_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-        [orderId, type, model, color, fabric, quantity, observations, unitPrice]
+        `INSERT INTO products
+           (order_id, type, model, color, fabric, quantity, observations, unit_price, needs_vectorization, vectorization_price)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        [
+          orderId,
+          type,
+          model,
+          color,
+          fabric,
+          quantity,
+          observations,
+          unitPrice,
+          needsVectorization,
+          vectorizationPrice,
+        ]
       )
       const productId = inserted.rows[0].id
 

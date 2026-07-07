@@ -63,6 +63,17 @@ function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, on
             <strong>{formatCurrency(product.unitPrice * product.quantity)}</strong>
           </div>
         )}
+
+        {product.needsVectorization && (
+          <div>
+            <span>Vetorização</span>
+            <strong>
+              {product.vectorizationPrice != null
+                ? formatCurrency(product.vectorizationPrice)
+                : '-'}
+            </strong>
+          </div>
+        )}
       </div>
 
       {product.observations && (

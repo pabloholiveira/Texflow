@@ -24,6 +24,8 @@ router.patch(
       observations: 'observations',
       needsDesignRework: 'needs_design_rework',
       unitPrice: 'unit_price',
+      needsVectorization: 'needs_vectorization',
+      vectorizationPrice: 'vectorization_price',
     }
     const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
 

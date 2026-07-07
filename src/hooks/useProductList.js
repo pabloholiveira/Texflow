@@ -9,6 +9,8 @@ const emptyProduct = {
   quantity: '',
   observations: '',
   unitPrice: '',
+  needsVectorization: false,
+  vectorizationPrice: '',
 }
 
 export function useProductList(orderId) {
@@ -55,13 +57,15 @@ export function useProductList(orderId) {
   const [fileDraft, setFileDraft] = useState({ category: 'referencia', uploadedBy: '' })
   const [selectedFile, setSelectedFile] = useState(null)
 
+  // Forma funcional (current => ...), não `{ ...product, ... }` direto: o
+  // checkbox de vetorização (ProductFields) chama isso duas vezes seguidas
+  // (needsVectorization e vectorizationPrice) na mesma função — com a forma
+  // antiga, a segunda chamada partiria do `product` "congelado" de antes da
+  // primeira, apagando-a. A forma funcional sempre parte do estado mais
+  // recente, mesmo entre duas chamadas síncronas seguidas.
   function handleChange(event) {
     const { name, value } = event.target
-
-    setProduct({
-      ...product,
-      [name]: value,
-    })
+    setProduct((current) => ({ ...current, [name]: value }))
   }
 
   function openAddModal() {
@@ -103,6 +107,8 @@ export function useProductList(orderId) {
       // String vazia não é um NUMERIC válido pro Postgres — vira null
       // (mesmo tratamento do "Editar Dados", ver saveInfoEdit).
       unitPrice: product.unitPrice === '' ? null : Number(product.unitPrice),
+      vectorizationPrice:
+        product.vectorizationPrice === '' ? null : Number(product.vectorizationPrice),
       operations: selectedSteps,
     })
 
@@ -153,6 +159,8 @@ export function useProductList(orderId) {
       quantity: target.quantity,
       observations: target.observations || '',
       unitPrice: target.unitPrice ?? '',
+      needsVectorization: target.needsVectorization,
+      vectorizationPrice: target.vectorizationPrice ?? '',
     })
     setIsInfoModalOpen(true)
   }
@@ -162,9 +170,10 @@ export function useProductList(orderId) {
     setInfoProductId(null)
   }
 
+  // Mesma razão da forma funcional em handleChange, acima.
   function handleInfoDraftChange(event) {
     const { name, value } = event.target
-    setInfoDraft({ ...infoDraft, [name]: value })
+    setInfoDraft((current) => ({ ...current, [name]: value }))
   }
 
   async function saveInfoEdit() {
@@ -179,6 +188,8 @@ export function useProductList(orderId) {
     const updated = await updateProductInfo(orderId, infoProductId, {
       ...infoDraft,
       unitPrice: infoDraft.unitPrice === '' ? null : Number(infoDraft.unitPrice),
+      vectorizationPrice:
+        infoDraft.vectorizationPrice === '' ? null : Number(infoDraft.vectorizationPrice),
     })
     if (updated) closeInfoModal()
   }

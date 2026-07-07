@@ -51,7 +51,7 @@ export async function recalculateOrderTotal(db, orderId) {
   const result = await db.query(
     `UPDATE orders
      SET total_value = (
-       SELECT COALESCE(SUM(unit_price * quantity), 0)
+       SELECT COALESCE(SUM(unit_price * quantity), 0) + COALESCE(SUM(vectorization_price), 0)
        FROM products
        WHERE order_id = $1
      )
@@ -104,6 +104,8 @@ export function mapProduct(productRow, workflowRows = [], commentRows = [], file
     observations: productRow.observations,
     needsDesignRework: productRow.needs_design_rework,
     unitPrice: toNumber(productRow.unit_price),
+    needsVectorization: productRow.needs_vectorization,
+    vectorizationPrice: toNumber(productRow.vectorization_price),
     workflow: workflowRows.map((step) => ({
       step: step.step_name,
       status: step.status,

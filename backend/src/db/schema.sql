@@ -56,6 +56,12 @@ CREATE TABLE products (
   -- Valor cobrado por unidade (não a linha inteira) — NULL em produtos que
   -- ainda não tiveram valor informado. Ver orders.total_value acima.
   unit_price NUMERIC(10, 2),
+  -- Item 2 do roadmap comercial (CLAUDE.md): "vetorizar logo" como serviço
+  -- adicional. vectorization_price só é preenchido quando o checkbox está
+  -- marcado; some (vira NULL) se desmarcado — entra na soma de
+  -- orders.total_value junto com unit_price * quantity.
+  needs_vectorization BOOLEAN NOT NULL DEFAULT false,
+  vectorization_price NUMERIC(10, 2),
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

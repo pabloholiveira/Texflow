@@ -5,3 +5,19 @@
   gap: 16px;
   margin-top: 24px;
 }
+
+.vectorization-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.vectorization-checkbox button {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
