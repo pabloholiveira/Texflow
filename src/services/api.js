@@ -95,3 +95,8 @@ export const operationsApi = {
   create: (name, position = null) => request('/operations', { method: 'POST', body: { name, position } }),
   remove: (id) => request(`/operations/${id}`, { method: 'DELETE' }),
 }
+
+export const reportsApi = {
+  avgTimePerStep: () => request('/reports/avg-time-per-step'),
+  bottlenecks: () => request('/reports/bottlenecks'),
+}

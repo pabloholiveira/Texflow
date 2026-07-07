@@ -9,6 +9,7 @@ import productCommentsRouter from './routes/productComments.js'
 import productFilesRouter from './routes/productFiles.js'
 import clientsRouter from './routes/clients.js'
 import operationsRouter from './routes/operations.js'
+import reportsRouter from './routes/reports.js'
 import { requireAuth } from './middleware/requireAuth.js'
 
 export function createApp() {
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/products', productsRouter)
   app.use('/clients', clientsRouter)
   app.use('/operations', operationsRouter)
+  app.use('/reports', reportsRouter)
 
   // Middleware de erro: precisa ser o último app.use e ter 4 argumentos —
   // é assim que o Express reconhece que é um error handler, não uma rota.

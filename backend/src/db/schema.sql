@@ -56,7 +56,24 @@ CREATE TABLE product_workflow_steps (
   step_name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'in_progress', 'done')),
+  -- Adicionado junto com product_workflow_events (Relatórios, 2026-07-07):
+  -- serve de referência pra "desde quando" uma etapa que nunca saiu de
+  -- 'pending' está parada, já que ela não tem nenhuma linha em events ainda.
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
   UNIQUE (product_id, step_name)
+);
+
+-- Log de toda mudança de status de uma etapa (Relatórios, 2026-07-07) — sem
+-- isso não tem como calcular "tempo médio por etapa" nem "há quanto tempo
+-- está parado" (nenhuma coluna antiga guardava quando um status mudou). Uma
+-- versão enxuta do "histórico" já citado como planejado no CLAUDE.md, só que
+-- limitada a transições de workflow de produto (não inclui order.stage).
+CREATE TABLE product_workflow_events (
+  id BIGSERIAL PRIMARY KEY,
+  workflow_step_id BIGINT NOT NULL REFERENCES product_workflow_steps(id) ON DELETE CASCADE,
+  from_status TEXT NOT NULL,
+  to_status TEXT NOT NULL,
+  changed_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE product_comments (

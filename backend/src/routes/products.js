@@ -107,7 +107,7 @@ router.patch(
     const { direction } = req.body
 
     const current = await pool.query(
-      'SELECT status FROM product_workflow_steps WHERE product_id = $1 AND step_name = $2',
+      'SELECT id AS workflow_step_id, status FROM product_workflow_steps WHERE product_id = $1 AND step_name = $2',
       [id, step]
     )
     if (current.rows.length === 0) {
@@ -134,15 +134,23 @@ router.patch(
       }
     }
 
+    const previousStatus = current.rows[0].status
     const nextStatus =
-      direction === 'forward'
-        ? getNextStatus(current.rows[0].status)
-        : getPreviousStatus(current.rows[0].status)
+      direction === 'forward' ? getNextStatus(previousStatus) : getPreviousStatus(previousStatus)
 
-    await pool.query(
-      'UPDATE product_workflow_steps SET status = $1 WHERE product_id = $2 AND step_name = $3',
-      [nextStatus, id, step]
-    )
+    // Status e evento gravados juntos, na mesma transação: os Relatórios
+    // (tempo médio por etapa, gargalos) dependem desse log estar sempre
+    // consistente com o status atual — ver product_workflow_events no schema.
+    await withTransaction(async (client) => {
+      await client.query(
+        'UPDATE product_workflow_steps SET status = $1 WHERE product_id = $2 AND step_name = $3',
+        [nextStatus, id, step]
+      )
+      await client.query(
+        'INSERT INTO product_workflow_events (workflow_step_id, from_status, to_status) VALUES ($1, $2, $3)',
+        [current.rows[0].workflow_step_id, previousStatus, nextStatus]
+      )
+    })
 
     res.json(await getProductById(pool, id))
   })
