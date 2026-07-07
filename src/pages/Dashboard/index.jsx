@@ -1,6 +1,56 @@
+import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
+import { useOrders } from '../../context/ordersContext'
+import { useClients } from '../../context/clientsContext'
+import { useOperations } from '../../context/operationsContext'
+import { getClientDisplayName } from '../../data/clients'
+
+// Deadline vem do backend como string "YYYY-MM-DD" pura (ver pool.js), então
+// dá pra comparar como texto direto, sem passar por Date/fuso horário.
+function todayString() {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function daysUntil(deadline, today) {
+  // "T00:00:00" evita que o parser interprete a data em UTC e desloque um
+  // dia pra trás dependendo do fuso do navegador.
+  const diffMs = new Date(`${deadline}T00:00:00`) - new Date(`${today}T00:00:00`)
+  return Math.round(diffMs / (1000 * 60 * 60 * 24))
+}
+
+function deadlineLabel(daysLeft) {
+  if (daysLeft === 0) return 'Vence hoje'
+  if (daysLeft === 1) return 'Vence amanhã'
+  return `Vence em ${daysLeft} dias`
+}
 
 function Dashboard() {
+  const { orders } = useOrders()
+  const { clients } = useClients()
+  const { operations } = useOperations()
+
+  const activeOrders = orders.filter((order) => !order.isDraft)
+  const today = todayString()
+
+  // "Atrasado" aqui só olha o prazo (deadline < hoje) — o modelo ainda não
+  // tem um conceito de "pedido entregue/concluído" que pudesse excluir um
+  // pedido cujos produtos já terminaram mas passou do prazo.
+  const overdueOrders = activeOrders.filter(
+    (order) => order.deadline && order.deadline < today
+  )
+  const upcomingOrders = activeOrders
+    .filter((order) => order.deadline && order.deadline >= today)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline))
+  const dueTomorrowCount = upcomingOrders.filter(
+    (order) => daysUntil(order.deadline, today) === 1
+  ).length
+
+  const allProducts = activeOrders.flatMap((order) => order.products)
+
   return (
     <Layout>
       <div className="page-header">
@@ -9,64 +59,63 @@ function Dashboard() {
           <p>Visão geral da produção da confecção</p>
         </div>
 
-        <button>Novo pedido</button>
+        <Link to="/pedidos/novo">
+          <button>Novo pedido</button>
+        </Link>
       </div>
 
-      <section className="alert-box">
-        <strong>🔴 Atenção</strong>
-        <p>3 pedidos estão atrasados e 2 vencem amanhã.</p>
-      </section>
+      {(overdueOrders.length > 0 || dueTomorrowCount > 0) && (
+        <section className="alert-box">
+          <strong>🔴 Atenção</strong>
+          <p>
+            {overdueOrders.length} pedido(s) estão atrasados e {dueTomorrowCount} vence(m)
+            amanhã.
+          </p>
+        </section>
+      )}
 
       <section className="dashboard-cards">
         <div className="dashboard-card">
           <span>Pedidos ativos</span>
-          <strong>28</strong>
+          <strong>{activeOrders.length}</strong>
         </div>
 
         <div className="dashboard-card">
           <span>Atrasados</span>
-          <strong>3</strong>
+          <strong>{overdueOrders.length}</strong>
         </div>
 
-        <div className="dashboard-card">
-          <span>Em Costura</span>
-          <strong>12</strong>
-        </div>
-
-        <div className="dashboard-card">
-          <span>Em Estampa</span>
-          <strong>8</strong>
-        </div>
-
-        <div className="dashboard-card">
-          <span>Em Bordado</span>
-          <strong>5</strong>
-        </div>
-
-        <div className="dashboard-card">
-          <span>Em Corte</span>
-          <strong>6</strong>
-        </div>
+        {operations.map((operation) => (
+          <div className="dashboard-card" key={operation}>
+            <span>Em {operation}</span>
+            <strong>
+              {
+                allProducts.filter((product) =>
+                  product.workflow.some(
+                    (step) => step.step === operation && step.status === 'in_progress'
+                  )
+                ).length
+              }
+            </strong>
+          </div>
+        ))}
       </section>
 
       <section className="dashboard-grid">
         <div className="dashboard-panel">
           <h2>Próximos vencimentos</h2>
 
-          <div className="deadline-item">
-            <strong>PED-2026-1023</strong>
-            <span>Escola Alfa • Vence hoje</span>
-          </div>
+          {upcomingOrders.length === 0 && <p>Nenhum pedido com prazo próximo.</p>}
 
-          <div className="deadline-item">
-            <strong>PED-2026-1024</strong>
-            <span>Igreja Vida • Vence amanhã</span>
-          </div>
-
-          <div className="deadline-item">
-            <strong>PED-2026-1025</strong>
-            <span>Empresa XP • Vence em 2 dias</span>
-          </div>
+          {upcomingOrders.slice(0, 5).map((order) => (
+            <div className="deadline-item" key={order.id}>
+              <strong>{order.orderNumber}</strong>
+              <span>
+                {getClientDisplayName(clients.find((client) => client.id === order.clientId))} •{' '}
+                {deadlineLabel(daysUntil(order.deadline, today))}
+              </span>
+            </div>
+          ))}
         </div>
 
         <div className="dashboard-panel">
@@ -75,11 +124,10 @@ function Dashboard() {
           <div className="production-flow">
             <span>Venda</span>
             <span>Design</span>
-            <span>Corte</span>
-            <span>Costura</span>
-            <span>Bordado</span>
-            <span>Estampa</span>
-            <span>Finalização</span>
+            <span>Aprovação</span>
+            {operations.map((operation) => (
+              <span key={operation}>{operation}</span>
+            ))}
           </div>
         </div>
       </section>
