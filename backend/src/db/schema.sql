@@ -143,3 +143,14 @@ CREATE TABLE product_files (
   uploaded_by TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
+
+-- Configurações genéricas chave-valor (hoje só o template da mensagem de
+-- WhatsApp — ver item 4 do roadmap comercial no CLAUDE.md). Uma tabela
+-- key-value em vez de uma coluna dedicada em algum lugar, pra uma futura
+-- segunda configuração não precisar de outra migração — mas sem construir
+-- uma UI genérica de "gerenciar configurações" por causa disso, só essa
+-- rota específica mesmo.
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);

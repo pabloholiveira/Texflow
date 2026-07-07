@@ -12,6 +12,7 @@ import PaymentFields from '../../components/ui/PaymentFields'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
+import { useSettings } from '../../context/settingsContext'
 import {
   ORDER_STAGES,
   getStageState,
@@ -25,6 +26,7 @@ function OrderDetails() {
   const { id } = useParams()
   const { orders, isLoading, advanceOrderStage, updateOrderInfo } = useOrders()
   const { clients } = useClients()
+  const { whatsappTemplate } = useSettings()
   const order = orders.find((item) => item.id === id)
   const client = order && clients.find((item) => item.id === order.clientId)
 
@@ -46,7 +48,7 @@ function OrderDetails() {
   // Só abre um link wa.me pré-preenchido — envio continua manual, sem API
   // oficial do WhatsApp Business (item 4 do roadmap comercial).
   function handleSendWhatsApp() {
-    const message = buildWhatsAppMessage(order, products)
+    const message = buildWhatsAppMessage(order, products, whatsappTemplate)
     window.open(buildWhatsAppLink(client.phone, message), '_blank')
   }
 

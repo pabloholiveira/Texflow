@@ -1,5 +1,30 @@
 import { formatCurrency } from './currency'
 
+// Duplicado em backend/src/routes/settings.js (processo Node separado, sem
+// import compartilhado) — mesma razão do ORDER_STAGES duplicado entre
+// backend/frontend. Usado como valor inicial no SettingsProvider, antes do
+// GET /settings/whatsapp-template resolver.
+export const DEFAULT_WHATSAPP_TEMPLATE = `Olá! Aqui estão os detalhes do seu pedido *{{pedido}}*:
+
+Produtos:
+{{produtos}}
+
+Valor total: {{valorTotal}}
+Valor pago: {{valorPago}}
+Falta pagar na retirada: {{faltaPagar}}
+
+Prazo de entrega: {{prazo}}`
+
+// Mostrado em Configurações como legenda de quais variáveis existem.
+export const WHATSAPP_PLACEHOLDERS = [
+  { token: '{{pedido}}', description: 'Número do pedido (ex: PED-2026-0007)' },
+  { token: '{{produtos}}', description: 'Lista dos produtos, um por linha' },
+  { token: '{{valorTotal}}', description: 'Valor total do pedido' },
+  { token: '{{valorPago}}', description: 'Valor já pago' },
+  { token: '{{faltaPagar}}', description: 'Quanto falta pagar na retirada' },
+  { token: '{{prazo}}', description: 'Prazo de entrega (ou "A combinar")' },
+]
+
 // Assume sempre Brasil (mesmo domínio de todo o resto do app — Kavi é uma
 // confecção brasileira, UI em português) — se o telefone já vier com o "55"
 // na frente (raro, mas possível se alguém digitar assim), não duplica.
@@ -16,29 +41,37 @@ function formatDeadline(deadline) {
   return new Date(`${deadline}T00:00:00`).toLocaleDateString('pt-BR')
 }
 
-export function buildWhatsAppMessage(order, products) {
-  const productLines = products.map((product) => {
-    const priceInfo =
-      product.unitPrice != null
-        ? ` — ${formatCurrency(product.unitPrice)}/un = ${formatCurrency(product.unitPrice * product.quantity)}`
-        : ''
-    return `• ${product.type}${product.model ? ` (${product.model})` : ''} — ${product.quantity} un.${priceInfo}`
-  })
+function buildProductLines(products) {
+  return products
+    .map((product) => {
+      const priceInfo =
+        product.unitPrice != null
+          ? ` — ${formatCurrency(product.unitPrice)}/un = ${formatCurrency(product.unitPrice * product.quantity)}`
+          : ''
+      return `• ${product.type}${product.model ? ` (${product.model})` : ''} — ${product.quantity} un.${priceInfo}`
+    })
+    .join('\n')
+}
 
+// Substituição simples de {{placeholder}} por texto — não é um motor de
+// template de verdade (sem condicionais/loop no template em si), só troca
+// os tokens fixos abaixo. Suficiente pro que Configurações precisa hoje.
+export function buildWhatsAppMessage(order, products, template) {
   const remaining = Math.max(order.totalValue - order.amountPaid, 0)
 
-  return [
-    `Olá! Aqui estão os detalhes do seu pedido *${order.orderNumber}*:`,
-    '',
-    'Produtos:',
-    ...productLines,
-    '',
-    `Valor total: ${formatCurrency(order.totalValue)}`,
-    `Valor pago: ${formatCurrency(order.amountPaid)}`,
-    `Falta pagar na retirada: ${formatCurrency(remaining)}`,
-    '',
-    `Prazo de entrega: ${formatDeadline(order.deadline)}`,
-  ].join('\n')
+  const values = {
+    '{{pedido}}': order.orderNumber,
+    '{{produtos}}': buildProductLines(products),
+    '{{valorTotal}}': formatCurrency(order.totalValue),
+    '{{valorPago}}': formatCurrency(order.amountPaid),
+    '{{faltaPagar}}': formatCurrency(remaining),
+    '{{prazo}}': formatDeadline(order.deadline),
+  }
+
+  return Object.entries(values).reduce(
+    (message, [token, value]) => message.split(token).join(value),
+    template
+  )
 }
 
 export function buildWhatsAppLink(phone, message) {

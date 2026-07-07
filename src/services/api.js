@@ -101,3 +101,9 @@ export const reportsApi = {
   avgTimePerStep: () => request('/reports/avg-time-per-step'),
   bottlenecks: () => request('/reports/bottlenecks'),
 }
+
+export const settingsApi = {
+  getWhatsappTemplate: () => request('/settings/whatsapp-template'),
+  updateWhatsappTemplate: (value) =>
+    request('/settings/whatsapp-template', { method: 'PUT', body: { value } }),
+}
