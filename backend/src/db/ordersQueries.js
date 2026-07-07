@@ -36,6 +36,32 @@ export async function findBlockingSteps(db, productId, stepPosition) {
   return result.rows.map((row) => row.step_name)
 }
 
+// Postgres NUMERIC volta do node-pg como string (evita perda de precisão
+// por padrão) — sem essa conversão o front receberia "28.00" em vez de 28.
+// Ver Funcionalidades comerciais (item 1) no CLAUDE.md.
+function toNumber(value) {
+  return value === null ? null : Number(value)
+}
+
+// Recalcula orders.total_value a partir dos produtos atuais — chamado
+// dentro da mesma transação de criar/editar/excluir um produto, nunca
+// isolado (evitaria ficar dessincronizado se a outra parte falhasse).
+// Devolve o total já convertido, pra rota não precisar de outro SELECT.
+export async function recalculateOrderTotal(db, orderId) {
+  const result = await db.query(
+    `UPDATE orders
+     SET total_value = (
+       SELECT COALESCE(SUM(unit_price * quantity), 0)
+       FROM products
+       WHERE order_id = $1
+     )
+     WHERE id = $1
+     RETURNING total_value`,
+    [orderId]
+  )
+  return toNumber(result.rows[0].total_value)
+}
+
 function groupBy(rows, key) {
   return rows.reduce((acc, row) => {
     const groupKey = row[key]
@@ -77,6 +103,7 @@ export function mapProduct(productRow, workflowRows = [], commentRows = [], file
     quantity: productRow.quantity,
     observations: productRow.observations,
     needsDesignRework: productRow.needs_design_rework,
+    unitPrice: toNumber(productRow.unit_price),
     workflow: workflowRows.map((step) => ({
       step: step.step_name,
       status: step.status,
@@ -98,6 +125,7 @@ export function mapOrder(orderRow, products = []) {
     deadline: orderRow.deadline,
     stage: orderRow.stage,
     isDraft: orderRow.is_draft,
+    totalValue: toNumber(orderRow.total_value),
     createdAt: orderRow.created_at,
     updatedAt: orderRow.updated_at,
     products,

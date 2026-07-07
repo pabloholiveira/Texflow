@@ -8,6 +8,7 @@ const emptyProduct = {
   fabric: '',
   quantity: '',
   observations: '',
+  unitPrice: '',
 }
 
 export function useProductList(orderId) {
@@ -15,6 +16,7 @@ export function useProductList(orderId) {
     orders,
     addProduct: addProductToOrder,
     removeProduct: removeProductFromOrder,
+    updateProductInfo,
     updateProductWorkflow,
     addProductComment,
     addProductFile,
@@ -36,6 +38,13 @@ export function useProductList(orderId) {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingProductId, setEditingProductId] = useState(null)
+
+  // "Editar Dados" (tipo/modelo/cor/tecido/quantidade/valor) é um modal
+  // separado de "Editar Etapas" acima — mesma ideia de um botão por
+  // modal focado numa coisa só, já usada em Comentários/Arquivos.
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
+  const [infoProductId, setInfoProductId] = useState(null)
+  const [infoDraft, setInfoDraft] = useState(emptyProduct)
 
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false)
   const [commentingProductId, setCommentingProductId] = useState(null)
@@ -91,6 +100,9 @@ export function useProductList(orderId) {
   async function saveNewProduct() {
     const created = await addProductToOrder(orderId, {
       ...product,
+      // String vazia não é um NUMERIC válido pro Postgres — vira null
+      // (mesmo tratamento do "Editar Dados", ver saveInfoEdit).
+      unitPrice: product.unitPrice === '' ? null : Number(product.unitPrice),
       operations: selectedSteps,
     })
 
@@ -129,6 +141,46 @@ export function useProductList(orderId) {
   async function saveWorkflow() {
     const updated = await updateProductWorkflow(orderId, editingProductId, selectedSteps)
     if (updated) closeEditModal()
+  }
+
+  function openInfoModal(target) {
+    setInfoProductId(target.id)
+    setInfoDraft({
+      type: target.type,
+      model: target.model || '',
+      color: target.color || '',
+      fabric: target.fabric || '',
+      quantity: target.quantity,
+      observations: target.observations || '',
+      unitPrice: target.unitPrice ?? '',
+    })
+    setIsInfoModalOpen(true)
+  }
+
+  function closeInfoModal() {
+    setIsInfoModalOpen(false)
+    setInfoProductId(null)
+  }
+
+  function handleInfoDraftChange(event) {
+    const { name, value } = event.target
+    setInfoDraft({ ...infoDraft, [name]: value })
+  }
+
+  async function saveInfoEdit() {
+    if (!infoDraft.type || !infoDraft.quantity) {
+      alert('Preencha pelo menos o tipo da peça e a quantidade.')
+      return
+    }
+
+    // Campo opcional: string vazia não é um NUMERIC válido pro Postgres,
+    // então vira null (mesmo significado de "valor não informado" que a
+    // coluna já usa).
+    const updated = await updateProductInfo(orderId, infoProductId, {
+      ...infoDraft,
+      unitPrice: infoDraft.unitPrice === '' ? null : Number(infoDraft.unitPrice),
+    })
+    if (updated) closeInfoModal()
   }
 
   const commentingProduct = products.find(
@@ -224,6 +276,12 @@ export function useProductList(orderId) {
     openEditModal,
     closeEditModal,
     saveWorkflow,
+    isInfoModalOpen,
+    infoDraft,
+    handleInfoDraftChange,
+    openInfoModal,
+    closeInfoModal,
+    saveInfoEdit,
     isCommentsModalOpen,
     commentingProduct,
     commentDraft,

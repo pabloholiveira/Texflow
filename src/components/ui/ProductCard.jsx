@@ -1,4 +1,5 @@
 import Button from './Button'
+import { formatCurrency } from '../../utils/currency'
 
 function getOverallStatus(workflow) {
   if (!workflow || workflow.length === 0) {
@@ -16,7 +17,7 @@ function getOverallStatus(workflow) {
   return { key: 'pending', label: 'Não iniciado' }
 }
 
-function ProductCard({ product, onRemove, onEdit, onOpenComments, onOpenFiles }) {
+function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, onOpenFiles }) {
   const overallStatus = getOverallStatus(product.workflow)
 
   return (
@@ -50,6 +51,18 @@ function ProductCard({ product, onRemove, onEdit, onOpenComments, onOpenFiles })
           <span>Cor</span>
           <strong>{product.color || '-'}</strong>
         </div>
+
+        <div>
+          <span>Valor unitário</span>
+          <strong>{product.unitPrice != null ? formatCurrency(product.unitPrice) : '-'}</strong>
+        </div>
+
+        {product.unitPrice != null && (
+          <div>
+            <span>Subtotal</span>
+            <strong>{formatCurrency(product.unitPrice * product.quantity)}</strong>
+          </div>
+        )}
       </div>
 
       {product.observations && (
@@ -74,7 +87,11 @@ function ProductCard({ product, onRemove, onEdit, onOpenComments, onOpenFiles })
 
       <div className="product-card-actions">
         <Button variant="secondary" onClick={() => onEdit(product)}>
-          Editar
+          Editar Etapas
+        </Button>
+
+        <Button variant="secondary" onClick={() => onEditInfo(product)}>
+          Editar Dados
         </Button>
 
         <Button variant="secondary" onClick={() => onOpenComments(product)}>

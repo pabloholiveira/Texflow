@@ -53,6 +53,28 @@ export function OrdersProvider({ children }) {
     )
   }
 
+  // Igual replaceProduct, mas também atualiza order.totalValue — usado
+  // sempre que a rota de produto pode ter mexido em unit_price/quantity
+  // (ver recalculateOrderTotal no backend, Funcionalidades comerciais no
+  // CLAUDE.md). O `orderTotalValue` vem junto na resposta da API, um campo
+  // a mais no objeto do produto — por isso o destructure separa os dois
+  // antes de guardar o produto de volta em order.products.
+  function replaceProductAndTotal(orderId, updatedProduct, totalValue) {
+    setOrders((current) =>
+      current.map((order) =>
+        order.id !== orderId
+          ? order
+          : {
+              ...order,
+              products: order.products.map((product) =>
+                product.id === updatedProduct.id ? updatedProduct : product
+              ),
+              totalValue,
+            }
+      )
+    )
+  }
+
   async function createOrder() {
     try {
       const order = await ordersApi.create({})
@@ -99,11 +121,11 @@ export function OrdersProvider({ children }) {
 
   async function addProduct(orderId, productDraft) {
     try {
-      const product = await productsApi.create(orderId, productDraft)
+      const { orderTotalValue, ...product } = await productsApi.create(orderId, productDraft)
       setOrders((current) =>
         current.map((order) =>
           order.id === orderId
-            ? { ...order, products: [...order.products, product] }
+            ? { ...order, products: [...order.products, product], totalValue: orderTotalValue }
             : order
         )
       )
@@ -116,15 +138,33 @@ export function OrdersProvider({ children }) {
 
   async function removeProduct(orderId, productId) {
     try {
-      await productsApi.remove(productId)
+      const { totalValue } = await productsApi.remove(productId)
       setOrders((current) =>
         current.map((order) =>
           order.id === orderId
-            ? { ...order, products: order.products.filter((item) => item.id !== productId) }
+            ? {
+                ...order,
+                products: order.products.filter((item) => item.id !== productId),
+                totalValue,
+              }
             : order
         )
       )
       return true
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
+  // Único jeito de editar tipo/modelo/cor/tecido/quantidade/valor de um
+  // produto já criado — reaproveita o mesmo PATCH /products/:id que
+  // toggleProductDesignRework já usa, só com outros campos.
+  async function updateProductInfo(orderId, productId, fields) {
+    try {
+      const { orderTotalValue, ...updated } = await productsApi.update(productId, fields)
+      replaceProductAndTotal(orderId, updated, orderTotalValue)
+      return updated
     } catch (err) {
       alert(err.message)
       return null
@@ -210,10 +250,10 @@ export function OrdersProvider({ children }) {
     if (!product) return null
 
     try {
-      const updated = await productsApi.update(productId, {
+      const { orderTotalValue, ...updated } = await productsApi.update(productId, {
         needsDesignRework: !product.needsDesignRework,
       })
-      replaceProduct(orderId, updated)
+      replaceProductAndTotal(orderId, updated, orderTotalValue)
       return updated
     } catch (err) {
       alert(err.message)
@@ -232,6 +272,7 @@ export function OrdersProvider({ children }) {
         advanceOrderStage,
         addProduct,
         removeProduct,
+        updateProductInfo,
         updateProductWorkflow,
         moveProductStepStatus,
         addProductComment,

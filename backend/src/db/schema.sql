@@ -33,6 +33,12 @@ CREATE TABLE orders (
   stage TEXT NOT NULL DEFAULT 'venda'
     CHECK (stage IN ('venda', 'design', 'aprovacao', 'producao')),
   is_draft BOOLEAN NOT NULL DEFAULT true,
+  -- Soma de (unit_price * quantity) de todos os produtos do pedido — ver
+  -- Funcionalidades comerciais (item 1) no CLAUDE.md. Guardado (não só
+  -- calculado na hora) e recalculado no backend a cada criação/edição/
+  -- remoção de produto, via recalculateOrderTotal (ordersQueries.js).
+  -- Registro de valor de venda pra controle interno, não é faturamento.
+  total_value NUMERIC(10, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT now(),
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
@@ -47,6 +53,9 @@ CREATE TABLE products (
   quantity INTEGER,
   observations TEXT,
   needs_design_rework BOOLEAN NOT NULL DEFAULT false,
+  -- Valor cobrado por unidade (não a linha inteira) — NULL em produtos que
+  -- ainda não tiveram valor informado. Ver orders.total_value acima.
+  unit_price NUMERIC(10, 2),
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

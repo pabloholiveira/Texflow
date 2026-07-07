@@ -16,6 +16,7 @@ import {
   getStageLabel,
 } from '../../data/orderStages'
 import { getClientDisplayName } from '../../data/clients'
+import { formatCurrency } from '../../utils/currency'
 
 function OrderDetails() {
   const { id } = useParams()
@@ -45,6 +46,12 @@ function OrderDetails() {
     openEditModal,
     closeEditModal,
     saveWorkflow,
+    isInfoModalOpen,
+    infoDraft,
+    handleInfoDraftChange,
+    openInfoModal,
+    closeInfoModal,
+    saveInfoEdit,
     isCommentsModalOpen,
     commentingProduct,
     commentDraft,
@@ -104,6 +111,11 @@ function OrderDetails() {
           <span>Produtos</span>
           <strong>{products.length}</strong>
         </div>
+
+        <div>
+          <span>Valor total</span>
+          <strong>{formatCurrency(order.totalValue)}</strong>
+        </div>
       </section>
 
       <section className="order-stages">
@@ -150,6 +162,7 @@ function OrderDetails() {
             product={item}
             onRemove={removeProduct}
             onEdit={openEditModal}
+            onEditInfo={openInfoModal}
             onOpenComments={openCommentsModal}
             onOpenFiles={openFilesModal}
           />
@@ -230,6 +243,17 @@ function OrderDetails() {
             Cancelar
           </Button>
           <Button onClick={saveWorkflow}>Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isInfoModalOpen} onClose={closeInfoModal} title="Editar Produto — Dados">
+        <ProductFields product={infoDraft} onChange={handleInfoDraftChange} />
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={closeInfoModal}>
+            Cancelar
+          </Button>
+          <Button onClick={saveInfoEdit}>Salvar</Button>
         </div>
       </Modal>
 

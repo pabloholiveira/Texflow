@@ -12,6 +12,7 @@ import ProductFields from '../../components/ui/ProductFields'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
+import { formatCurrency } from '../../utils/currency'
 
 const emptyClient = {
   personName: '',
@@ -62,6 +63,12 @@ function NewOrder() {
     openEditModal,
     closeEditModal,
     saveWorkflow,
+    isInfoModalOpen,
+    infoDraft,
+    handleInfoDraftChange,
+    openInfoModal,
+    closeInfoModal,
+    saveInfoEdit,
     isCommentsModalOpen,
     commentingProduct,
     commentDraft,
@@ -171,6 +178,7 @@ function NewOrder() {
             product={item}
             onRemove={removeProduct}
             onEdit={openEditModal}
+            onEditInfo={openInfoModal}
             onOpenComments={openCommentsModal}
             onOpenFiles={openFilesModal}
            />
@@ -178,6 +186,7 @@ function NewOrder() {
       </section>
 
       <section className="finalize-order">
+        <span>Valor total: {formatCurrency(order.totalValue)}</span>
         <Button onClick={handleFinalizeOrder}>Finalizar Pedido</Button>
       </section>
 
@@ -255,6 +264,17 @@ function NewOrder() {
             Cancelar
           </Button>
           <Button onClick={saveWorkflow}>Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isInfoModalOpen} onClose={closeInfoModal} title="Editar Produto — Dados">
+        <ProductFields product={infoDraft} onChange={handleInfoDraftChange} />
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={closeInfoModal}>
+            Cancelar
+          </Button>
+          <Button onClick={saveInfoEdit}>Salvar</Button>
         </div>
       </Modal>
 

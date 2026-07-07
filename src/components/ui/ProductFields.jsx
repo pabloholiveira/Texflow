@@ -57,6 +57,16 @@ function ProductFields({ product, onChange }) {
       />
 
       <Input
+        label="Valor unitário (R$)"
+        type="number"
+        step="0.01"
+        placeholder="Ex: 28.00"
+        value={product.unitPrice}
+        onChange={onChange}
+        name="unitPrice"
+      />
+
+      <Input
         label="Observações do modelo"
         placeholder="Ex: recorte lateral branco"
         value={product.observations}

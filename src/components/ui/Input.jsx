@@ -5,6 +5,7 @@ function Input({
   value,
   onChange,
   name,
+  step,
 }) {
   return (
     <div className="input-group">
@@ -16,6 +17,7 @@ function Input({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        step={step}
       />
     </div>
   )

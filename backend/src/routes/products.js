@@ -7,6 +7,7 @@ import {
   getNextStatus,
   getPreviousStatus,
   findBlockingSteps,
+  recalculateOrderTotal,
 } from '../db/ordersQueries.js'
 
 const router = Router()
@@ -22,6 +23,7 @@ router.patch(
       quantity: 'quantity',
       observations: 'observations',
       needsDesignRework: 'needs_design_rework',
+      unitPrice: 'unit_price',
     }
     const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
 
@@ -34,14 +36,23 @@ router.patch(
       .join(', ')
     const values = updates.map(([, value]) => value)
 
-    const result = await pool.query(
-      `UPDATE products SET ${setClause} WHERE id = $${values.length + 1} RETURNING id`,
-      [...values, req.params.id]
-    )
+    // Transação: preço ou quantidade podem estar entre os campos mudando,
+    // e o total do pedido (orders.total_value) precisa refletir isso na
+    // mesma operação — ver recalculateOrderTotal (Funcionalidades comerciais
+    // no CLAUDE.md).
+    const result = await withTransaction(async (client) => {
+      const updated = await client.query(
+        `UPDATE products SET ${setClause} WHERE id = $${values.length + 1} RETURNING order_id`,
+        [...values, req.params.id]
+      )
+      if (updated.rows.length === 0) return null
 
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Produto não encontrado' })
+      const orderTotalValue = await recalculateOrderTotal(client, updated.rows[0].order_id)
+      return { product: await getProductById(client, req.params.id), orderTotalValue }
+    })
 
-    res.json(await getProductById(pool, req.params.id))
+    if (!result) return res.status(404).json({ error: 'Produto não encontrado' })
+    res.json({ ...result.product, orderTotalValue: result.orderTotalValue })
   })
 )
 
@@ -50,9 +61,21 @@ router.delete(
   asyncHandler(async (req, res) => {
     // ON DELETE CASCADE em product_workflow_steps e product_comments
     // (schema.sql) já cuida de limpar o que depende deste produto.
-    const result = await pool.query('DELETE FROM products WHERE id = $1', [req.params.id])
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Produto não encontrado' })
-    res.status(204).send()
+    // Precisa do order_id antes de excluir pra poder recalcular o total
+    // depois — por isso virou uma transação em vez de um DELETE isolado.
+    const result = await withTransaction(async (client) => {
+      const deleted = await client.query(
+        'DELETE FROM products WHERE id = $1 RETURNING order_id',
+        [req.params.id]
+      )
+      if (deleted.rows.length === 0) return null
+
+      const totalValue = await recalculateOrderTotal(client, deleted.rows[0].order_id)
+      return { totalValue }
+    })
+
+    if (!result) return res.status(404).json({ error: 'Produto não encontrado' })
+    res.json(result)
   })
 )
 

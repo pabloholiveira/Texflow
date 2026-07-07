@@ -141,6 +141,15 @@ TexFlow is moving from an in-memory Context-only prototype to a real client-serv
 
 Don't jump ahead to a later step's concerns while working on an earlier one (e.g. don't add auth-related columns/fields while just designing step 1's schema) unless explicitly asked to.
 
+## Funcionalidades comerciais (roadmap, started 2026-07-07)
+
+A set of sales/commercial features, agreed with Pablo to be built **one at a time, each tested before moving to the next** — don't jump ahead to a later item's concerns while working on an earlier one (same rule as the backend migration roadmap above).
+
+1. **Valor por produto + valor total do pedido** — in progress as of 2026-07-07 (see below for the concrete plan). Each product line records the unit price charged; the order stores a computed total (sum of `unit_price * quantity` across its products). **This is sale-value bookkeeping for internal control only — not invoicing, fiscal notes, or accounting** — keeps the same "TexFlow is not a financial/fiscal system" boundary already stated at the top of this file.
+2. **Not started.** "Vetorizar logo" as an add-on service: a checkbox on the new-product wizard that, when checked, opens a small modal asking the price charged for that service, added into the order's total automatically. Once a design queue/view exists (still not built — see the auth roadmap's role-gating notes), checking this should flag that product for whoever does design work.
+3. **Not started.** Payment status at "Finalizar Pedido": record whether the client paid in full, half, or some other amount, and compute what's left to pay on pickup.
+4. **Not started.** WhatsApp integration: generate a formatted message with the order's key info (products, values, payment, deadline) and open a pre-filled `wa.me` link for manual sending — no official WhatsApp Business API, just a link.
+
 ## Possível expansão futura (não é prioridade agora)
 
 Existe a possibilidade de, no futuro, o TexFlow ser adaptado para venda a outras confecções (modelo SaaS), não só uso interno da Kavi. O domain model atual (pedido → produtos → workflow independente, operações configuráveis) já é razoavelmente genérico e ajuda nessa direção, mas isso exigiria mudanças significativas de arquitetura: multi-tenancy (isolar dados por empresa), configuração por empresa das operações/catálogos, autenticação multiempresa, e decisões de modelo de negócio (cobrança, suporte, onboarding).
