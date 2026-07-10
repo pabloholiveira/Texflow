@@ -6,11 +6,12 @@ const NAV_ITEMS = [
   {
     to: '/',
     label: 'Dashboard',
-    // Velocímetro (gauge) — visão geral/monitoramento da produção.
+    // Painéis assimétricos (widgets) — escolhido pelo Pablo entre variantes.
     icon: (
       <>
-        <path d="M12 14l4-4" />
-        <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+        <rect x="3" y="3" width="8" height="18" rx="1.5" />
+        <rect x="14" y="3" width="7" height="8" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
       </>
     ),
   },
