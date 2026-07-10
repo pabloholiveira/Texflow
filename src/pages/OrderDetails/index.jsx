@@ -364,14 +364,6 @@ function OrderDetails() {
             ))}
         </div>
 
-        <Input
-          label="Autor"
-          placeholder="Seu nome"
-          name="author"
-          value={commentDraft.author}
-          onChange={handleCommentChange}
-        />
-
         <Textarea
           label="Comentário"
           placeholder="Ex: Cliente aprovou alteração"

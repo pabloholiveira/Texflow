@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useOrders } from '../context/ordersContext'
+import { useAuth } from '../context/authContext'
 
 const emptyProduct = {
   type: '',
@@ -23,6 +24,7 @@ export function useProductList(orderId) {
     addProductComment,
     addProductFile,
   } = useOrders()
+  const { user } = useAuth()
 
   const order = orders.find((item) => item.id === orderId)
   const products = order ? order.products : []
@@ -200,7 +202,9 @@ export function useProductList(orderId) {
 
   function openCommentsModal(target) {
     setCommentingProductId(target.id)
-    setCommentDraft({ author: '', text: '' })
+    // Autor vem do usuário logado, não é mais digitado à mão — ver
+    // "Estilo de trabalho"/roadmap no CLAUDE.md, item 1.1.
+    setCommentDraft({ author: user?.username || '', text: '' })
     setIsCommentsModalOpen(true)
   }
 
@@ -215,8 +219,8 @@ export function useProductList(orderId) {
   }
 
   async function addComment() {
-    if (!commentDraft.author || !commentDraft.text) {
-      alert('Preencha o autor e o comentário.')
+    if (!commentDraft.text) {
+      alert('Escreva um comentário.')
       return
     }
 
