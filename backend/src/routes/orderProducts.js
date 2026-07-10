@@ -30,13 +30,18 @@ router.post(
     }
 
     const result = await withTransaction(async (client) => {
-      const orderCheck = await client.query('SELECT id FROM orders WHERE id = $1', [orderId])
+      const orderCheck = await client.query('SELECT id, stage FROM orders WHERE id = $1', [orderId])
       if (orderCheck.rows.length === 0) return null
+
+      // Produto criado num pedido que JÁ está em design entra direto na
+      // fila (fluxo normal, não retrabalho) — senão ficaria invisível pro
+      // designer. Ver gatilho 1 em orders.js/advance-stage.
+      const bornInDesign = orderCheck.rows[0].stage === 'design'
 
       const inserted = await client.query(
         `INSERT INTO products
-           (order_id, type, model, color, fabric, quantity, observations, unit_price, needs_vectorization, vectorization_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+           (order_id, type, model, color, fabric, quantity, observations, unit_price, needs_vectorization, vectorization_price, design_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
         [
           orderId,
           type,
@@ -48,9 +53,22 @@ router.post(
           unitPrice,
           needsVectorization,
           vectorizationPrice,
+          bornInDesign ? 'pendente' : null,
         ]
       )
       const productId = inserted.rows[0].id
+
+      if (bornInDesign) {
+        await client.query(
+          `INSERT INTO product_events (product_id, event_type, payload, created_by)
+           VALUES ($1, 'design_status_changed', $2, $3)`,
+          [
+            productId,
+            JSON.stringify({ from: null, to: 'pendente', trigger: 'order-stage' }),
+            req.user.username,
+          ]
+        )
+      }
 
       // Operações escolhidas na criação sempre entram como 'pending' —
       // é uma decisão de venda (quais operações), não de produção

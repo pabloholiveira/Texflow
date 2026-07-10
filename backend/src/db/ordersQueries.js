@@ -103,13 +103,14 @@ export function mapProduct(productRow, workflowRows = [], commentRows = [], file
     quantity: productRow.quantity,
     observations: productRow.observations,
     designStatus: productRow.design_status,
-    // Derivado do design_status desde o item 3.1 — a coluna boolean
-    // needs_design_rework não existe mais (migration 0002), mas todo lugar
-    // do front que já consumia needsDesignRework (badge em Pedidos, badge e
-    // checkbox em Produção) continua funcionando sem mudança: "precisa de
-    // design" = está na fila e ainda não concluiu.
+    designIsRework: productRow.design_is_rework,
+    // Derivado (itens 3.1 + ajuste de integração): needsDesignRework agora
+    // significa "retrabalho ATIVO" — está na fila (qualquer status antes de
+    // concluido) E entrou como retrabalho (design_is_rework). Produto em
+    // fluxo normal de design fica na fila sem acender badge/checkbox nenhum.
     needsDesignRework:
-      productRow.design_status === 'pendente' || productRow.design_status === 'em_design',
+      productRow.design_is_rework &&
+      ['pendente', 'em_design', 'aprovacao'].includes(productRow.design_status),
     unitPrice: toNumber(productRow.unit_price),
     needsVectorization: productRow.needs_vectorization,
     vectorizationPrice: toNumber(productRow.vectorization_price),

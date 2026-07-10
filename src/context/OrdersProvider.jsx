@@ -244,18 +244,20 @@ export function OrdersProvider({ children }) {
     }
   }
 
-  // Item 3.1: status de design granular (null/pendente/em_design/concluido).
-  // Não passa por replaceProductAndTotal porque status de design não mexe em
-  // valor — a resposta nem traz orderTotalValue.
+  // Item 3.1: status de design granular (null/pendente/em_design/aprovacao/
+  // concluido). A resposta traz orderStage junto (mesmo padrão do
+  // orderTotalValue) porque concluir o último produto avança o estágio do
+  // pedido automaticamente no servidor — atualiza os dois de uma vez.
   async function setProductDesignStatus(orderId, productId, status) {
     try {
-      const updated = await productsApi.setDesignStatus(productId, status)
+      const { orderStage, ...updated } = await productsApi.setDesignStatus(productId, status)
       setOrders((current) =>
         current.map((order) =>
           order.id !== orderId
             ? order
             : {
                 ...order,
+                stage: orderStage ?? order.stage,
                 products: order.products.map((product) =>
                   product.id === updated.id ? updated : product
                 ),
@@ -269,14 +271,33 @@ export function OrdersProvider({ children }) {
     }
   }
 
-  // Mantém a assinatura que Produção já usa — marcar entra na fila como
-  // 'pendente', desmarcar tira da fila (null).
+  // Checkbox "Retrabalho de design" (Produção) — mantém a assinatura, mas a
+  // regra de entrada/saída da fila agora vive no servidor (PATCH
+  // /products/:id/design-rework): marcar entra/reentra como 'pendente' com
+  // a flag de retrabalho; desmarcar limpa a flag (e tira da fila só se o
+  // card ainda estava 'pendente').
   async function toggleProductDesignRework(orderId, productId) {
     const order = orders.find((item) => item.id === orderId)
     const product = order?.products.find((item) => item.id === productId)
     if (!product) return null
 
-    return setProductDesignStatus(orderId, productId, product.needsDesignRework ? null : 'pendente')
+    try {
+      const updated = await productsApi.setDesignRework(productId, !product.needsDesignRework)
+      setOrders((current) =>
+        current.map((item) =>
+          item.id !== orderId
+            ? item
+            : {
+                ...item,
+                products: item.products.map((p) => (p.id === updated.id ? updated : p)),
+              }
+        )
+      )
+      return updated
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
   }
 
   return (

@@ -16,7 +16,7 @@ const router = Router()
 // da tela /design. null = tira o produto da fila. Toda transição real vira
 // uma linha em product_events ('design_status_changed', payload {from, to}),
 // na mesma transação — é a semente do histórico do item 3.3.
-const DESIGN_STATUSES = ['pendente', 'em_design', 'concluido']
+const DESIGN_STATUSES = ['pendente', 'em_design', 'aprovacao', 'concluido']
 
 router.patch(
   '/:id/design-status',
@@ -31,12 +31,14 @@ router.patch(
 
     const result = await withTransaction(async (client) => {
       const current = await client.query(
-        'SELECT design_status FROM products WHERE id = $1',
+        'SELECT design_status, order_id FROM products WHERE id = $1',
         [req.params.id]
       )
       if (current.rows.length === 0) return null
 
       const from = current.rows[0].design_status
+      const orderId = current.rows[0].order_id
+
       if (from !== status) {
         await client.query('UPDATE products SET design_status = $1 WHERE id = $2', [
           status,
@@ -45,7 +47,93 @@ router.patch(
         await client.query(
           `INSERT INTO product_events (product_id, event_type, payload, created_by)
            VALUES ($1, 'design_status_changed', $2, $3)`,
-          [req.params.id, JSON.stringify({ from, to: status }), req.user.username]
+          [req.params.id, JSON.stringify({ from, to: status, trigger: 'manual' }), req.user.username]
+        )
+      }
+
+      // Gatilho 2 da integração Pedidos ↔ Design (CLAUDE.md, item 3.1):
+      // o ÚLTIMO produto do pedido a concluir design avança o pedido de
+      // 'design' pra 'aprovacao' automaticamente. Retrabalho não dispara
+      // nada aqui — o pedido de um retrabalho típico já está em 'producao',
+      // então o guard de stage segura.
+      if (status === 'concluido') {
+        await client.query(
+          `UPDATE orders SET stage = 'aprovacao', updated_at = now()
+           WHERE id = $1 AND stage = 'design'
+             AND NOT EXISTS (
+               SELECT 1 FROM products
+               WHERE order_id = $1 AND design_status IS DISTINCT FROM 'concluido'
+             )`,
+          [orderId]
+        )
+      }
+
+      const orderStage = await client.query('SELECT stage FROM orders WHERE id = $1', [orderId])
+      const product = await getProductById(client, req.params.id)
+      return { product, orderStage: orderStage.rows[0].stage }
+    })
+
+    if (!result) return res.status(404).json({ error: 'Produto não encontrado' })
+    // orderStage vai junto (mesmo padrão do orderTotalValue) — o gatilho
+    // acima pode ter avançado o estágio, e o front atualiza sem refetch.
+    res.json({ ...result.product, orderStage: result.orderStage })
+  })
+)
+
+// Checkbox "Retrabalho de design" (Produção) — intenção diferente de mover
+// card no kanban, por isso rota própria. Marcar: entra/reentra na fila como
+// 'pendente' com design_is_rework = true. Desmarcar: limpa a flag; se o
+// card ainda estava 'pendente' (ninguém começou), sai da fila junto — um
+// flag acidental não deixa lixo; se já estava em andamento, o card fica na
+// coluna onde está (só perde o marcador de retrabalho).
+router.patch(
+  '/:id/design-rework',
+  asyncHandler(async (req, res) => {
+    const { value } = req.body
+
+    if (typeof value !== 'boolean') {
+      return res.status(400).json({ error: 'value deve ser true ou false' })
+    }
+
+    const result = await withTransaction(async (client) => {
+      const current = await client.query(
+        'SELECT design_status, design_is_rework FROM products WHERE id = $1',
+        [req.params.id]
+      )
+      if (current.rows.length === 0) return null
+
+      const { design_status: from, design_is_rework: wasRework } = current.rows[0]
+
+      let newStatus = from
+      if (value && (from === null || from === 'concluido')) newStatus = 'pendente'
+      if (!value && from === 'pendente') newStatus = null
+
+      await client.query(
+        'UPDATE products SET design_status = $1, design_is_rework = $2 WHERE id = $3',
+        [newStatus, value, req.params.id]
+      )
+
+      if (newStatus !== from) {
+        await client.query(
+          `INSERT INTO product_events (product_id, event_type, payload, created_by)
+           VALUES ($1, 'design_status_changed', $2, $3)`,
+          [
+            req.params.id,
+            JSON.stringify({ from, to: newStatus, trigger: 'rework-checkbox' }),
+            req.user.username,
+          ]
+        )
+      }
+      if (value !== wasRework) {
+        await client.query(
+          `INSERT INTO product_events (product_id, event_type, payload, created_by)
+           VALUES ($1, $2, $3, $4)`,
+          [
+            req.params.id,
+            value ? 'design_rework_flagged' : 'design_rework_unflagged',
+            JSON.stringify({ designStatus: newStatus }),
+            req.user.username,
+          ]
         )
       }
 

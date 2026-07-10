@@ -48,15 +48,17 @@ router.get(
 router.get(
   '/bottlenecks',
   asyncHandler(async (req, res) => {
-    // Só pedidos já em produção: antes disso toda etapa está travada em
-    // 'pending' por definição (ninguém começou a trabalhar ainda), então
-    // incluir esses pedidos só adicionaria ruído, não sinal de gargalo real.
+    // Só pedidos que já saíram de Venda — desde a integração Design ↔
+    // Produção (item 3.1), produção roda em paralelo com design a partir
+    // daí, então é desse ponto em diante que gargalo vira sinal real.
+    // Pedidos ainda em Venda ficam de fora (toda etapa 'pending' por
+    // definição, ninguém pode ter começado).
     const volumeResult = await pool.query(`
       SELECT pws.step_name, pws.status, COUNT(*) AS total
       FROM product_workflow_steps pws
       JOIN products p ON p.id = pws.product_id
       JOIN orders o ON o.id = p.order_id
-      WHERE o.is_draft = false AND o.stage = 'producao' AND pws.status != 'done'
+      WHERE o.is_draft = false AND o.stage != 'venda' AND pws.status != 'done'
       GROUP BY pws.step_name, pws.status
       ORDER BY pws.step_name
     `)
@@ -87,7 +89,7 @@ router.get(
         ORDER BY changed_at DESC
         LIMIT 1
       ) last_event ON true
-      WHERE o.is_draft = false AND o.stage = 'producao' AND pws.status != 'done'
+      WHERE o.is_draft = false AND o.stage != 'venda' AND pws.status != 'done'
       ORDER BY since ASC
       LIMIT 10
     `)

@@ -9,3 +9,13 @@
 .design-card-order:hover {
   text-decoration: underline;
 }
+
+/* 4 colunas (pendente → em design → aprovação → concluído) — o
+   .kanban-board base de production.css é grid de 3. */
+.design-board {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.design-board .rework-badge {
+  margin-bottom: 8px;
+}

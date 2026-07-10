@@ -6,15 +6,19 @@ import { useOrders } from '../../context/ordersContext'
 const COLUMNS = [
   { status: 'pendente', label: 'Pendente' },
   { status: 'em_design', label: 'Em design' },
+  { status: 'aprovacao', label: 'Aprovação' },
   { status: 'concluido', label: 'Concluído' },
 ]
 
-// Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md): lista
-// tudo que foi marcado como precisando de design (o checkbox de retrabalho
-// em Produção põe o produto aqui como 'pendente'). Lê direto do cache
-// compartilhado (useOrders), igual Produção — não existe um GET /design-queue
-// dedicado de propósito: os pedidos já estão no front, criar outro endpoint
-// seria uma segunda fonte de verdade sem necessidade.
+// Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
+// caminhos de entrada: automático (pedido sai de Venda → todos os produtos
+// entram como 'pendente', fluxo normal) e manual (checkbox de retrabalho em
+// Produção → 'pendente' com o marcador de retrabalho, que vira badge no
+// card). Concluir o último produto de um pedido em Design avança o estágio
+// do pedido pra Aprovação automaticamente (gatilho no servidor). Lê direto
+// do cache compartilhado (useOrders), igual Produção — não existe um GET
+// /design-queue dedicado de propósito: os pedidos já estão no front, criar
+// outro endpoint seria uma segunda fonte de verdade sem necessidade.
 function Design() {
   const { orders, setProductDesignStatus } = useOrders()
 
@@ -39,7 +43,7 @@ function Design() {
         </div>
       </div>
 
-      <div className="kanban-board">
+      <div className="kanban-board design-board">
         {COLUMNS.map((column) => {
           const items = queue.filter(
             (item) => item.product.designStatus === column.status
@@ -55,6 +59,9 @@ function Design() {
 
               {items.map((item) => (
                 <div className="kanban-card" key={item.product.id}>
+                  {item.product.needsDesignRework && (
+                    <span className="rework-badge">Retrabalho de design</span>
+                  )}
                   <strong>
                     {item.product.type}
                     {item.product.model ? ` — ${item.product.model}` : ''}
@@ -89,6 +96,26 @@ function Design() {
                           variant="secondary"
                           onClick={() =>
                             setProductDesignStatus(item.orderId, item.product.id, 'pendente')
+                          }
+                        >
+                          Voltar
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            setProductDesignStatus(item.orderId, item.product.id, 'aprovacao')
+                          }
+                        >
+                          Enviar pra Aprovação
+                        </Button>
+                      </>
+                    )}
+
+                    {column.status === 'aprovacao' && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            setProductDesignStatus(item.orderId, item.product.id, 'em_design')
                           }
                         >
                           Voltar

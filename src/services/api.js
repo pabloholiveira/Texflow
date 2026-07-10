@@ -74,6 +74,8 @@ export const productsApi = {
     }),
   setDesignStatus: (id, status) =>
     request(`/products/${id}/design-status`, { method: 'PATCH', body: { status } }),
+  setDesignRework: (id, value) =>
+    request(`/products/${id}/design-rework`, { method: 'PATCH', body: { value } }),
 }
 
 export const commentsApi = {

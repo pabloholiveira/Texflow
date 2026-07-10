@@ -35,7 +35,10 @@ function Production() {
   const selectedOperation = manuallySelectedOperation ?? operations[0]
 
   const allProducts = orders
-    .filter((order) => !order.isDraft && order.stage === 'producao')
+    // Desde a integração Design ↔ Produção (item 3.1): produção roda em
+    // paralelo com design a partir do momento em que o pedido sai de Venda —
+    // não espera mais a aprovação.
+    .filter((order) => !order.isDraft && order.stage !== 'venda')
     .flatMap((order) =>
       order.products.map((product) => ({
         ...product,

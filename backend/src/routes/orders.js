@@ -103,10 +103,35 @@ router.patch(
     const nextStage = ORDER_STAGES[currentIndex + 1]
 
     if (nextStage) {
-      await pool.query(
-        'UPDATE orders SET stage = $1, updated_at = now() WHERE id = $2',
-        [nextStage, req.params.id]
-      )
+      await withTransaction(async (client) => {
+        await client.query(
+          'UPDATE orders SET stage = $1, updated_at = now() WHERE id = $2',
+          [nextStage, req.params.id]
+        )
+
+        // Gatilho 1 da integração Pedidos ↔ Design (CLAUDE.md, item 3.1):
+        // sair de Venda coloca todos os produtos do pedido na fila de design
+        // como 'pendente' (fluxo normal, não retrabalho — design_is_rework
+        // fica false). Produtos que já estivessem na fila não são resetados.
+        if (nextStage === 'design') {
+          const entered = await client.query(
+            `UPDATE products SET design_status = 'pendente', design_is_rework = false
+             WHERE order_id = $1 AND design_status IS NULL RETURNING id`,
+            [req.params.id]
+          )
+          for (const row of entered.rows) {
+            await client.query(
+              `INSERT INTO product_events (product_id, event_type, payload, created_by)
+               VALUES ($1, 'design_status_changed', $2, $3)`,
+              [
+                row.id,
+                JSON.stringify({ from: null, to: 'pendente', trigger: 'order-stage' }),
+                req.user.username,
+              ]
+            )
+          }
+        }
+      })
     }
 
     const [order] = await fetchOrders('WHERE id = $1', [req.params.id])
