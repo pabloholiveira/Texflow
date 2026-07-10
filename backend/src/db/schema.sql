@@ -125,6 +125,13 @@ CREATE TABLE users (
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin')),
+  -- Item 1.2 do roadmap (CLAUDE.md): DELETE /users/:id nunca apaga a linha
+  -- de verdade (soft delete) — só marca is_active = false. Login (POST
+  -- /auth/login) passa a rejeitar um usuário inativo com a mesma mensagem
+  -- genérica de credenciais erradas (mesma convenção anti-enumeração já
+  -- usada ali). Não revoga tokens já emitidos (JWT é stateless, sem tabela
+  -- de sessões — mesma decisão de design já registrada na Etapa 7).
+  is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

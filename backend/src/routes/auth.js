@@ -18,9 +18,10 @@ router.post(
     const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [username])
     const user = rows[0]
 
-    // Mesma mensagem genérica nos dois casos (usuário não existe ou senha
-    // errada) — não dar a dica de qual dos dois falhou.
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    // Mesma mensagem genérica em todos os casos (usuário não existe, senha
+    // errada ou conta desativada via DELETE /users/:id) — não dar a dica de
+    // qual foi o motivo.
+    if (!user || !user.is_active || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'Usuário ou senha inválidos' })
     }
 
