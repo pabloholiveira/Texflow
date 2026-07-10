@@ -1,6 +1,77 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/authContext'
 
+// Ícones outline (stroke, não preenchidos) — SVG inline, nenhuma lib externa.
+const NAV_ITEMS = [
+  {
+    to: '/',
+    label: 'Dashboard',
+    icon: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </>
+    ),
+  },
+  {
+    to: '/pedidos',
+    label: 'Pedidos',
+    icon: (
+      <>
+        <path d="M16 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
+        <path d="M9 7h6M9 11h6M9 15h4" />
+      </>
+    ),
+  },
+  {
+    to: '/clientes',
+    label: 'Clientes',
+    icon: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5" />
+        <path d="M16.5 11.5a3.5 3.5 0 1 0-2-6.4" />
+        <path d="M17.5 14.8c2.3.6 4 2.3 4 5.2" />
+      </>
+    ),
+  },
+  {
+    to: '/producao',
+    label: 'Produção',
+    icon: (
+      <>
+        <path d="M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z" />
+        <path d="M12 22v-10" />
+        <path d="M3.5 7l8.5 5 8.5-5" />
+      </>
+    ),
+  },
+  {
+    to: '/relatorios',
+    label: 'Relatórios',
+    icon: (
+      <>
+        <path d="M4 20V10" />
+        <path d="M10 20V4" />
+        <path d="M16 20v-7" />
+        <path d="M22 20H2" />
+      </>
+    ),
+  },
+  {
+    to: '/configuracoes',
+    label: 'Configurações',
+    icon: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </>
+    ),
+  },
+]
+
 function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -12,20 +83,41 @@ function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <h2>TexFlow</h2>
+      <div className="sidebar-brand">
+        <span className="sidebar-brand-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="3 12 7.5 12 10 6.5 14 17.5 16.5 12 21 12" />
+          </svg>
+        </span>
+        <span className="sidebar-brand-name">
+          <span className="sidebar-brand-accent">T</span>exFlow
+        </span>
+      </div>
 
       <nav>
-        <NavLink to="/">Dashboard</NavLink>
-
-        <NavLink to="/pedidos">Pedidos</NavLink>
-
-        <NavLink to="/clientes">Clientes</NavLink>
-
-        <NavLink to="/producao">Produção</NavLink>
-
-        <NavLink to="/relatorios">Relatórios</NavLink>
-
-        <NavLink to="/configuracoes">Configurações</NavLink>
+        {NAV_ITEMS.map((item) => (
+          <NavLink to={item.to} key={item.to}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {item.icon}
+            </svg>
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
       </nav>
 
       <div className="sidebar-user">

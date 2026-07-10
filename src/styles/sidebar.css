@@ -1,35 +1,111 @@
 .sidebar {
-  width: 240px;
-  background: #111827;
-  color: white;
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  width: 248px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: 24px 16px;
 }
 
-.sidebar h2 {
-  margin-top: 0;
-  margin-bottom: 32px;
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 24px;
+}
+
+.sidebar-brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.sidebar-brand-accent {
+  color: var(--color-primary);
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
+  flex: 1;
 }
 
 .sidebar a {
-  color: #d1d5db;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 10px;
-  border-radius: 8px;
-  transition: 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 12px;
+  border-radius: var(--radius-input);
+  transition: 0.15s;
+}
+
+.sidebar a svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .sidebar a:hover {
-  background: #1f2937;
-  color: white;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .sidebar a.active {
-  background: #2563eb;
-  color: white;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--color-border);
+  padding: 16px 12px 0;
+  margin-top: 16px;
+}
+
+.sidebar-user > span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user button {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  padding: 7px 14px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.sidebar-user button:hover {
+  background: #d5dfec;
 }
