@@ -14,8 +14,16 @@
 --   quebraria esse comportamento já validado no front-end.
 -- - Índices adicionais (orders.client_id, products.order_id, etc.) foram
 --   deliberadamente adiados para a Etapa 2 — combinado com o usuário.
+--
+-- Item 2.1 do roadmap "Fechamentos rápidos" (CLAUDE.md): todo CREATE TABLE
+-- aqui usa IF NOT EXISTS de propósito — este arquivo é rodado por
+-- backend/src/scripts/migrate.js como a base ("migration 0") toda vez que o
+-- migration runner executa, então precisa ser seguro rodar tanto num banco
+-- novo (cria tudo) quanto num banco que já tem essas tabelas (não faz nada).
+-- Mudanças incrementais a partir de agora (novas colunas, novas tabelas) vão
+-- em backend/src/db/migrations/, não direto aqui — ver README nessa pasta.
 
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients (
   id BIGSERIAL PRIMARY KEY,
   person_name TEXT NOT NULL,
   company_name TEXT,
@@ -25,7 +33,7 @@ CREATE TABLE clients (
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id BIGSERIAL PRIMARY KEY,
   order_number TEXT NOT NULL UNIQUE,
   client_id BIGINT REFERENCES clients(id),
@@ -49,7 +57,7 @@ CREATE TABLE orders (
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
   id BIGSERIAL PRIMARY KEY,
   order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
@@ -71,7 +79,7 @@ CREATE TABLE products (
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE product_workflow_steps (
+CREATE TABLE IF NOT EXISTS product_workflow_steps (
   id BIGSERIAL PRIMARY KEY,
   product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   step_name TEXT NOT NULL,
@@ -89,7 +97,7 @@ CREATE TABLE product_workflow_steps (
 -- está parado" (nenhuma coluna antiga guardava quando um status mudou). Uma
 -- versão enxuta do "histórico" já citado como planejado no CLAUDE.md, só que
 -- limitada a transições de workflow de produto (não inclui order.stage).
-CREATE TABLE product_workflow_events (
+CREATE TABLE IF NOT EXISTS product_workflow_events (
   id BIGSERIAL PRIMARY KEY,
   workflow_step_id BIGINT NOT NULL REFERENCES product_workflow_steps(id) ON DELETE CASCADE,
   from_status TEXT NOT NULL,
@@ -97,7 +105,7 @@ CREATE TABLE product_workflow_events (
   changed_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE product_comments (
+CREATE TABLE IF NOT EXISTS product_comments (
   id BIGSERIAL PRIMARY KEY,
   product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   author TEXT NOT NULL,
@@ -105,7 +113,7 @@ CREATE TABLE product_comments (
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE operations (
+CREATE TABLE IF NOT EXISTS operations (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   -- Camada da operação na sequência de produção (menor = mais cedo). Operações
@@ -120,7 +128,7 @@ CREATE TABLE operations (
 -- ('admin', 'vendedora', 'producao', ...) depois sem migração estrutural,
 -- só relaxando o CHECK. password_hash nunca guarda a senha em texto puro —
 -- é gerado com bcrypt (ver backend/src/scripts/createUser.js).
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
@@ -135,7 +143,7 @@ CREATE TABLE users (
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE product_files (
+CREATE TABLE IF NOT EXISTS product_files (
   id BIGSERIAL PRIMARY KEY,
   product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   -- 'referencia' = material recebido na venda (fotos, logo, tom de tecido),
@@ -157,7 +165,7 @@ CREATE TABLE product_files (
 -- segunda configuração não precisar de outra migração — mas sem construir
 -- uma UI genérica de "gerenciar configurações" por causa disso, só essa
 -- rota específica mesmo.
-CREATE TABLE settings (
+CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
