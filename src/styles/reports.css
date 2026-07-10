@@ -1,0 +1,28 @@
+/* Tabelas de Relatórios — .report-table existia no JSX sem nenhum CSS
+   (tabelas cruas do navegador) até o polish visual. */
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.report-table th {
+  text-align: left;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-table td {
+  padding: 12px 14px;
+}
+
+.report-table tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
+
+.report-table tbody tr:hover {
+  background: var(--color-bg);
+}
