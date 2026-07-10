@@ -28,11 +28,15 @@ function Login() {
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <polyline points="3 12 7.5 12 10 6.5 14 17.5 16.5 12 21 12" />
+            <path d="M3 18.5h18" />
+            <path d="M18.5 18.5V8a2 2 0 0 0-2-2H8.5a2 2 0 0 0-2 2v3.5" />
+            <path d="M6.5 14.5v2.5" />
+            <path d="M18.5 9.5a2 2 0 1 1 0 4" />
+            <path d="M11 6V4" />
           </svg>
         </span>
         <span className="login-brand-name">
