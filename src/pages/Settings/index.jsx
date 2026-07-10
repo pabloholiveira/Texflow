@@ -1,15 +1,102 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
+import Modal from '../../components/ui/Modal'
 import Textarea from '../../components/ui/Textarea'
 import { useOperations } from '../../context/operationsContext'
 import { useSettings } from '../../context/settingsContext'
+import { useAuth } from '../../context/authContext'
+import { usersApi } from '../../services/api'
 import { WHATSAPP_PLACEHOLDERS } from '../../utils/whatsapp'
+
+const emptyOwnPasswordDraft = { currentPassword: '', newPassword: '', confirmNewPassword: '' }
 
 function Settings() {
   const { operations, operationsData, addOperation, removeOperation } = useOperations()
   const [newOperation, setNewOperation] = useState('')
   const [newPosition, setNewPosition] = useState('')
+
+  const { user } = useAuth()
+
+  // Página própria, sem context compartilhado — mesma razão do Reports:
+  // nenhuma outra tela consome a lista de usuários.
+  const [users, setUsers] = useState([])
+  useEffect(() => {
+    usersApi
+      .list()
+      .then(setUsers)
+      .catch((err) => alert(err.message))
+  }, [])
+
+  const [ownPasswordDraft, setOwnPasswordDraft] = useState(emptyOwnPasswordDraft)
+
+  function handleOwnPasswordChange(event) {
+    const { name, value } = event.target
+    setOwnPasswordDraft((current) => ({ ...current, [name]: value }))
+  }
+
+  async function handleChangeOwnPassword() {
+    const { currentPassword, newPassword, confirmNewPassword } = ownPasswordDraft
+
+    if (!currentPassword || !newPassword) {
+      alert('Preencha a senha atual e a nova senha.')
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      alert('A confirmação não bate com a nova senha.')
+      return
+    }
+
+    try {
+      await usersApi.changeOwnPassword(user.id, currentPassword, newPassword)
+      setOwnPasswordDraft(emptyOwnPasswordDraft)
+      alert('Senha alterada com sucesso.')
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const [resetTarget, setResetTarget] = useState(null)
+  const [resetPasswordDraft, setResetPasswordDraft] = useState('')
+
+  function openResetModal(target) {
+    setResetTarget(target)
+    setResetPasswordDraft('')
+  }
+
+  function closeResetModal() {
+    setResetTarget(null)
+  }
+
+  async function confirmResetPassword() {
+    if (!resetPasswordDraft || resetPasswordDraft.length < 6) {
+      alert('A senha temporária precisa ter pelo menos 6 caracteres.')
+      return
+    }
+
+    try {
+      await usersApi.resetPassword(resetTarget.id, resetPasswordDraft)
+      alert(`Senha de "${resetTarget.username}" redefinida. Informe a nova senha a essa pessoa.`)
+      closeResetModal()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function handleDeactivate(target) {
+    if (!confirm(`Desativar o usuário "${target.username}"? Ele não vai mais conseguir logar.`)) {
+      return
+    }
+
+    try {
+      const updated = await usersApi.deactivate(target.id)
+      setUsers((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
 
   const { whatsappTemplate, updateWhatsappTemplate } = useSettings()
   const [templateDraft, setTemplateDraft] = useState(whatsappTemplate)
@@ -140,6 +227,91 @@ function Settings() {
           <Button onClick={handleSaveTemplate}>Salvar Mensagem</Button>
         </div>
       </section>
+
+      <section className="form-section">
+        <h2>Minha Senha</h2>
+
+        <Input
+          label="Senha atual"
+          type="password"
+          name="currentPassword"
+          value={ownPasswordDraft.currentPassword}
+          onChange={handleOwnPasswordChange}
+        />
+        <Input
+          label="Nova senha"
+          type="password"
+          name="newPassword"
+          value={ownPasswordDraft.newPassword}
+          onChange={handleOwnPasswordChange}
+        />
+        <Input
+          label="Confirmar nova senha"
+          type="password"
+          name="confirmNewPassword"
+          value={ownPasswordDraft.confirmNewPassword}
+          onChange={handleOwnPasswordChange}
+        />
+
+        <div className="modal-actions">
+          <Button onClick={handleChangeOwnPassword}>Trocar Senha</Button>
+        </div>
+      </section>
+
+      <section className="form-section">
+        <h2>Usuários</h2>
+
+        <p>
+          Sem papéis por setor ainda — qualquer pessoa logada pode redefinir a
+          senha de outra ou desativar uma conta.
+        </p>
+
+        <div className="operations-settings-list">
+          {users.map((item) => (
+            <div className="operations-settings-item" key={item.id}>
+              <span>
+                {item.username}
+                {item.id === user?.id && ' (você)'}
+                {!item.isActive && ' — inativo'}
+              </span>
+
+              {item.id !== user?.id && (
+                <div className="modal-actions">
+                  <Button variant="secondary" onClick={() => openResetModal(item)}>
+                    Redefinir Senha
+                  </Button>
+                  {item.isActive && (
+                    <Button variant="danger" onClick={() => handleDeactivate(item)}>
+                      Desativar
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Modal
+        isOpen={!!resetTarget}
+        onClose={closeResetModal}
+        title={resetTarget ? `Redefinir senha — ${resetTarget.username}` : 'Redefinir senha'}
+      >
+        <Input
+          label="Senha temporária"
+          type="password"
+          name="resetPassword"
+          value={resetPasswordDraft}
+          onChange={(event) => setResetPasswordDraft(event.target.value)}
+        />
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={closeResetModal}>
+            Cancelar
+          </Button>
+          <Button onClick={confirmResetPassword}>Redefinir</Button>
+        </div>
+      </Modal>
     </Layout>
   )
 }

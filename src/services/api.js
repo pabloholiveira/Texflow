@@ -102,6 +102,15 @@ export const reportsApi = {
   bottlenecks: () => request('/reports/bottlenecks'),
 }
 
+export const usersApi = {
+  list: () => request('/users'),
+  changeOwnPassword: (id, currentPassword, newPassword) =>
+    request(`/users/${id}/password`, { method: 'PATCH', body: { currentPassword, newPassword } }),
+  resetPassword: (id, newPassword) =>
+    request(`/users/${id}/password`, { method: 'PATCH', body: { newPassword } }),
+  deactivate: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+}
+
 export const settingsApi = {
   getWhatsappTemplate: () => request('/settings/whatsapp-template'),
   updateWhatsappTemplate: (value) =>

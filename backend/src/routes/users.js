@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import bcrypt from 'bcrypt'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 
@@ -63,6 +64,56 @@ router.patch(
       }
       throw err
     }
+  })
+)
+
+// Item 1.3 do roadmap (CLAUDE.md): duas situações na mesma rota, porque a
+// regra de negócio muda conforme quem está trocando —
+// - Trocando a própria senha (id === req.user.id): exige currentPassword e
+//   confere com bcrypt.compare antes de aceitar a nova.
+// - Redefinindo a senha de outro usuário: não exige currentPassword — é uma
+//   redefinição direta (o sistema é uso interno, sem papéis por setor ainda
+//   — hoje todo autenticado é 'admin' — então não há verificação extra de
+//   permissão além de "estar logado", mesma limitação já registrada no
+//   restante do CLAUDE.md sobre a role única).
+router.patch(
+  '/:id/password',
+  asyncHandler(async (req, res) => {
+    const targetId = req.params.id
+    const { currentPassword, newPassword } = req.body
+
+    if (!newPassword || newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ error: 'newPassword é obrigatório e deve ter pelo menos 6 caracteres' })
+    }
+
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [targetId])
+    const target = rows[0]
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' })
+
+    const isSelf = String(req.user.id) === String(targetId)
+    if (isSelf) {
+      if (!currentPassword) {
+        return res
+          .status(400)
+          .json({ error: 'currentPassword é obrigatório para trocar a própria senha' })
+      }
+      const matches = await bcrypt.compare(currentPassword, target.password_hash)
+      if (!matches) {
+        // 403, não 401: um 401 fora de /auth/login é tratado pelo front
+        // (src/services/api.js) como sessão expirada e desloga na hora — a
+        // pessoa está autenticada normalmente, só errou a senha atual.
+        return res.status(403).json({ error: 'Senha atual incorreta' })
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10)
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
+      passwordHash,
+      targetId,
+    ])
+    res.json(mapUser(target))
   })
 )
 
