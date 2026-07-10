@@ -1,3 +1,11 @@
+.products-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-card);
+}
+
 .products-panel-header {
   display: flex;
   align-items: center;
@@ -7,28 +15,104 @@
 
 .products-panel-header h2 {
   margin: 0;
+  font-size: 17px;
+}
+
+/* Primeiro CSS real do ProductCard — as classes existiam desde a criação do
+   componente, sem nenhuma regra (gap documentado no CLAUDE.md até o polish). */
+.product-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  background: var(--color-surface);
+}
+
+.product-card + .product-card {
+  margin-top: 14px;
+}
+
+.product-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.product-card-header strong {
+  font-size: 15px;
+}
+
+.product-card-header p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.product-card-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 20px;
+  margin-top: 16px;
+}
+
+.product-card-info span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.product-card-info strong {
+  font-size: 14px;
+}
+
+.product-card-notes {
+  margin-top: 14px;
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.product-card-notes span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.product-card-notes p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.product-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .product-status {
-  border-radius: 999px;
-  padding: 6px 12px;
+  border-radius: var(--radius-chip);
+  padding: 6px 14px;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .product-status-pending {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
 }
 
 .product-status-progress {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 .product-status-done {
-  background: #ecfdf5;
-  color: #15803d;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .suggestible-input {
@@ -38,21 +122,25 @@
 .suggestion-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
   margin-top: 6px;
   overflow: hidden;
+  background: var(--color-surface);
 }
 
 .suggestion-item {
-  background: white;
+  background: var(--color-surface);
+  color: var(--color-text);
   border: none;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 8px 12px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 10px 14px;
   text-align: left;
   cursor: pointer;
   font: inherit;
   font-size: 14px;
+  font-weight: 400;
 }
 
 .suggestion-item:last-child {
@@ -60,5 +148,36 @@
 }
 
 .suggestion-item:hover {
-  background: #f3f4f6;
+  background: var(--color-primary-soft);
+}
+
+.reference-files-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reference-files-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 8px 8px 8px 14px;
+  font-size: 14px;
+}
+
+.reference-files-list li button {
+  background: transparent;
+  color: var(--color-danger);
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.reference-files-list li button:hover {
+  background: #fef2f2;
 }

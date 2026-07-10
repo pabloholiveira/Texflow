@@ -1,5 +1,5 @@
 .comments-hint {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   font-size: 13px;
   margin: 0 0 16px;
 }
@@ -14,10 +14,9 @@
 }
 
 .comment-item {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 12px 14px;
+  background: var(--color-bg);
+  border-radius: var(--radius-input);
+  padding: 14px 16px;
 }
 
 .comment-item-header {
@@ -28,7 +27,7 @@
 }
 
 .comment-item-header span {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
