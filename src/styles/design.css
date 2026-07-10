@@ -1,0 +1,11 @@
+/* Fila de design (/design) — reusa .kanban-* de production.css; aqui só o
+   que é específico desta tela. */
+.design-card-order {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.design-card-order:hover {
+  text-decoration: underline;
+}

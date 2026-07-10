@@ -11,6 +11,7 @@ import Orders from './pages/Orders'
 import OrderDetails from './pages/OrderDetails'
 import Clients from './pages/Clients'
 import Production from './pages/Production'
+import Design from './pages/Design'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
@@ -34,6 +35,7 @@ function App() {
                   <Route path="/pedidos/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
 
                   <Route path="/clientes" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+                  <Route path="/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
                   <Route path="/producao" element={<ProtectedRoute><Production /></ProtectedRoute>} />
                   <Route path="/relatorios" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                   <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

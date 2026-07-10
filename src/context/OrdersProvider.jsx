@@ -158,8 +158,8 @@ export function OrdersProvider({ children }) {
   }
 
   // Único jeito de editar tipo/modelo/cor/tecido/quantidade/valor de um
-  // produto já criado — reaproveita o mesmo PATCH /products/:id que
-  // toggleProductDesignRework já usa, só com outros campos.
+  // produto já criado, via o PATCH /products/:id genérico. (Status de design
+  // NÃO passa por aqui — tem rota própria, ver setProductDesignStatus.)
   async function updateProductInfo(orderId, productId, fields) {
     try {
       const { orderTotalValue, ...updated } = await productsApi.update(productId, fields)
@@ -244,21 +244,39 @@ export function OrdersProvider({ children }) {
     }
   }
 
-  async function toggleProductDesignRework(orderId, productId) {
-    const order = orders.find((item) => item.id === orderId)
-    const product = order?.products.find((item) => item.id === productId)
-    if (!product) return null
-
+  // Item 3.1: status de design granular (null/pendente/em_design/concluido).
+  // Não passa por replaceProductAndTotal porque status de design não mexe em
+  // valor — a resposta nem traz orderTotalValue.
+  async function setProductDesignStatus(orderId, productId, status) {
     try {
-      const { orderTotalValue, ...updated } = await productsApi.update(productId, {
-        needsDesignRework: !product.needsDesignRework,
-      })
-      replaceProductAndTotal(orderId, updated, orderTotalValue)
+      const updated = await productsApi.setDesignStatus(productId, status)
+      setOrders((current) =>
+        current.map((order) =>
+          order.id !== orderId
+            ? order
+            : {
+                ...order,
+                products: order.products.map((product) =>
+                  product.id === updated.id ? updated : product
+                ),
+              }
+        )
+      )
       return updated
     } catch (err) {
       alert(err.message)
       return null
     }
+  }
+
+  // Mantém a assinatura que Produção já usa — marcar entra na fila como
+  // 'pendente', desmarcar tira da fila (null).
+  async function toggleProductDesignRework(orderId, productId) {
+    const order = orders.find((item) => item.id === orderId)
+    const product = order?.products.find((item) => item.id === productId)
+    if (!product) return null
+
+    return setProductDesignStatus(orderId, productId, product.needsDesignRework ? null : 'pendente')
   }
 
   return (
@@ -278,6 +296,7 @@ export function OrdersProvider({ children }) {
         addProductComment,
         addProductFile,
         toggleProductDesignRework,
+        setProductDesignStatus,
       }}
     >
       {children}

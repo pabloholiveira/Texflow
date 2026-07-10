@@ -12,6 +12,51 @@ import {
 
 const router = Router()
 
+// Item 3.1 (CLAUDE.md): status de design do produto — as colunas do kanban
+// da tela /design. null = tira o produto da fila. Toda transição real vira
+// uma linha em product_events ('design_status_changed', payload {from, to}),
+// na mesma transação — é a semente do histórico do item 3.3.
+const DESIGN_STATUSES = ['pendente', 'em_design', 'concluido']
+
+router.patch(
+  '/:id/design-status',
+  asyncHandler(async (req, res) => {
+    const { status } = req.body
+
+    if (status !== null && !DESIGN_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `status deve ser null ou um de: ${DESIGN_STATUSES.join(', ')}`,
+      })
+    }
+
+    const result = await withTransaction(async (client) => {
+      const current = await client.query(
+        'SELECT design_status FROM products WHERE id = $1',
+        [req.params.id]
+      )
+      if (current.rows.length === 0) return null
+
+      const from = current.rows[0].design_status
+      if (from !== status) {
+        await client.query('UPDATE products SET design_status = $1 WHERE id = $2', [
+          status,
+          req.params.id,
+        ])
+        await client.query(
+          `INSERT INTO product_events (product_id, event_type, payload, created_by)
+           VALUES ($1, 'design_status_changed', $2, $3)`,
+          [req.params.id, JSON.stringify({ from, to: status }), req.user.username]
+        )
+      }
+
+      return getProductById(client, req.params.id)
+    })
+
+    if (!result) return res.status(404).json({ error: 'Produto não encontrado' })
+    res.json(result)
+  })
+)
+
 router.patch(
   '/:id',
   asyncHandler(async (req, res) => {
@@ -22,7 +67,6 @@ router.patch(
       fabric: 'fabric',
       quantity: 'quantity',
       observations: 'observations',
-      needsDesignRework: 'needs_design_rework',
       unitPrice: 'unit_price',
       needsVectorization: 'needs_vectorization',
       vectorizationPrice: 'vectorization_price',

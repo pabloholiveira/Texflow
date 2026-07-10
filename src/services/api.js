@@ -72,6 +72,8 @@ export const productsApi = {
       method: 'PATCH',
       body: { direction },
     }),
+  setDesignStatus: (id, status) =>
+    request(`/products/${id}/design-status`, { method: 'PATCH', body: { status } }),
 }
 
 export const commentsApi = {
