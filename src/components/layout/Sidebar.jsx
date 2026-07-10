@@ -6,12 +6,11 @@ const NAV_ITEMS = [
   {
     to: '/',
     label: 'Dashboard',
+    // Velocímetro (gauge) — visão geral/monitoramento da produção.
     icon: (
       <>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        <path d="M12 14l4-4" />
+        <path d="M3.34 19a10 10 0 1 1 17.32 0" />
       </>
     ),
   },
@@ -28,12 +27,11 @@ const NAV_ITEMS = [
   {
     to: '/clientes',
     label: 'Clientes',
+    // Silhueta única de pessoa (não o par de usuários).
     icon: (
       <>
-        <circle cx="9" cy="8" r="3.5" />
-        <path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5" />
-        <path d="M16.5 11.5a3.5 3.5 0 1 0-2-6.4" />
-        <path d="M17.5 14.8c2.3.6 4 2.3 4 5.2" />
+        <circle cx="12" cy="8" r="4" />
+        <path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" />
       </>
     ),
   },
@@ -93,11 +91,13 @@ function Sidebar() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M3 18.5h18" />
-            <path d="M18.5 18.5V8a2 2 0 0 0-2-2H8.5a2 2 0 0 0-2 2v3.5" />
-            <path d="M6.5 14.5v2.5" />
-            <path d="M18.5 9.5a2 2 0 1 1 0 4" />
-            <path d="M11 6V4" />
+            <g transform="scale(-1 1) translate(-24 0)">
+              <path d="M3 18.5h18" />
+              <path d="M18.5 18.5V8a2 2 0 0 0-2-2H8.5a2 2 0 0 0-2 2v3.5" />
+              <path d="M6.5 14.5v2.5" />
+              <path d="M18.5 9.5a2 2 0 1 1 0 4" />
+              <path d="M11 6V4" />
+            </g>
           </svg>
         </span>
         <span className="sidebar-brand-name">

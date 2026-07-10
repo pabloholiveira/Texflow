@@ -10,6 +10,8 @@
   --color-primary-hover: #26476e;
   /* Tom claro do primário, pra fundos de item ativo/badges azuis */
   --color-primary-soft: #e3eaf3;
+  /* Azul intermediário pra contornos visíveis (ex: botões da sidebar) */
+  --color-primary-border: #b9c9dd;
 
   /* Superfícies e fundo */
   --color-bg: #eef1f5;
