@@ -1,0 +1,29 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* Reset padrão de todo <button> — a maioria já ganha sua aparência real via
+   .btn/.btn-{variant} (Button, buttons.css), mas vários botões avulsos pelo
+   app (ex: "Sair" no Sidebar, "Novo pedido" no Dashboard) ainda dependem
+   deste estilo base em vez de passar pelo componente Button. */
+button {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #1d4ed8;
+}

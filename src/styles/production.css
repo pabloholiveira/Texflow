@@ -1,3 +1,20 @@
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  background: white;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.tabs button:hover {
+  background: #f3f4f6;
+}
+
 .tabs button.active {
   background: #2563eb;
   color: white;

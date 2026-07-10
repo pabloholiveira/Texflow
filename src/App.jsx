@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import './App.css'
 import { AuthProvider } from './context/AuthProvider'
 import { OrdersProvider } from './context/OrdersProvider'
 import { ClientsProvider } from './context/ClientsProvider'

@@ -3,3 +3,35 @@
   align-items: center;
   gap: 10px;
 }
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-card {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 0.6fr;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px;
+  text-decoration: none;
+  color: #111827;
+}
+
+.order-card:hover {
+  border-color: #2563eb;
+}
+
+.order-card p {
+  margin: 6px 0 0;
+}
+
+.order-card span {
+  color: #6b7280;
+  font-size: 14px;
+}
