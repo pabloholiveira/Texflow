@@ -104,3 +104,15 @@
   background: var(--color-bg);
   color: var(--color-text-muted);
 }
+
+.stage-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stage-hint {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}

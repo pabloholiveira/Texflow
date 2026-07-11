@@ -24,7 +24,8 @@ import { buildWhatsAppMessage, buildWhatsAppLink } from '../../utils/whatsapp'
 
 function OrderDetails() {
   const { id } = useParams()
-  const { orders, isLoading, advanceOrderStage, updateOrderInfo } = useOrders()
+  const { orders, isLoading, advanceOrderStage, regressOrderStage, updateOrderInfo } =
+    useOrders()
   const { clients } = useClients()
   const { whatsappTemplate } = useSettings()
   const order = orders.find((item) => item.id === id)
@@ -112,6 +113,17 @@ function OrderDetails() {
     )
   }
 
+  // Design → Aprovação é uma transição do sistema (dispara sozinha quando o
+  // último produto conclui o design), então o "Avançar etapa" fica
+  // desabilitado enquanto ainda há design em andamento. Se nada está
+  // pendente (ex: alguém voltou de Aprovação para Design por engano), o
+  // botão reabilita — senão o pedido ficaria preso sem ter o que concluir.
+  const designInProgress =
+    order.stage === 'design' &&
+    order.products.some(
+      (item) => item.designStatus && item.designStatus !== 'concluido'
+    )
+
   return (
     <Layout>
       <div className="page-header">
@@ -172,30 +184,45 @@ function OrderDetails() {
         <div className="products-panel-header">
           <h2>Etapas do Pedido</h2>
 
-          <Button
-            variant="secondary"
-            onClick={() => advanceOrderStage(order.id)}
-            disabled={order.stage === 'producao'}
-          >
-            Avançar etapa
-          </Button>
+          <div className="stage-actions">
+            <Button
+              variant="secondary"
+              onClick={() => regressOrderStage(order.id)}
+              disabled={order.stage === 'venda'}
+            >
+              Voltar etapa
+            </Button>
+
+            <Button
+              variant="secondary"
+              onClick={() => advanceOrderStage(order.id)}
+              disabled={order.stage === 'producao' || designInProgress}
+            >
+              Avançar etapa
+            </Button>
+          </div>
         </div>
 
         <div className="stage-list">
-          {ORDER_STAGES.filter((stage) => stage.value !== 'producao').map(
-            (stage) => (
-              <div
-                key={stage.value}
-                className={`stage-chip stage-chip-${getStageState(
-                  stage.value,
-                  order.stage
-                )}`}
-              >
-                {stage.label}
-              </div>
-            )
-          )}
+          {ORDER_STAGES.map((stage) => (
+            <div
+              key={stage.value}
+              className={`stage-chip stage-chip-${getStageState(
+                stage.value,
+                order.stage
+              )}`}
+            >
+              {stage.label}
+            </div>
+          ))}
         </div>
+
+        {designInProgress && (
+          <p className="stage-hint">
+            O pedido avança para Aprovação automaticamente quando todos os
+            produtos concluírem o design.
+          </p>
+        )}
       </section>
 
       <section className="products-panel">

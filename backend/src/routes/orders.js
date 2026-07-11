@@ -139,4 +139,32 @@ router.patch(
   })
 )
 
+// Espelho do advance-stage, um estágio por vez na direção contrária.
+// Voltar SÓ muda o estágio — não mexe em workflow de produção, não tira
+// produto da fila de design e não apaga nada (decisão do Pablo, 2026-07-11):
+// regressão existe para corrigir um avanço errado, não para desfazer
+// trabalho. Se o pedido voltar para 'design' e o último produto concluir o
+// design de novo, o gatilho automático Design→Aprovação (em
+// PATCH /products/:id/design-status) dispara normalmente.
+router.patch(
+  '/:id/regress-stage',
+  asyncHandler(async (req, res) => {
+    const current = await pool.query('SELECT stage FROM orders WHERE id = $1', [req.params.id])
+    if (current.rows.length === 0) return res.status(404).json({ error: 'Pedido não encontrado' })
+
+    const currentIndex = ORDER_STAGES.indexOf(current.rows[0].stage)
+    const previousStage = ORDER_STAGES[currentIndex - 1]
+
+    if (previousStage) {
+      await pool.query(
+        'UPDATE orders SET stage = $1, updated_at = now() WHERE id = $2',
+        [previousStage, req.params.id]
+      )
+    }
+
+    const [order] = await fetchOrders('WHERE id = $1', [req.params.id])
+    res.json(order)
+  })
+)
+
 export default router

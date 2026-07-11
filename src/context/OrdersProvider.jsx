@@ -119,6 +119,17 @@ export function OrdersProvider({ children }) {
     }
   }
 
+  async function regressOrderStage(orderId) {
+    try {
+      const order = await ordersApi.regressStage(orderId)
+      replaceOrder(order)
+      return order
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
   async function addProduct(orderId, productDraft) {
     try {
       const { orderTotalValue, ...product } = await productsApi.create(orderId, productDraft)
@@ -309,6 +320,7 @@ export function OrdersProvider({ children }) {
         finalizeOrder,
         updateOrderInfo,
         advanceOrderStage,
+        regressOrderStage,
         addProduct,
         removeProduct,
         updateProductInfo,

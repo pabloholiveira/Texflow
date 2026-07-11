@@ -55,6 +55,7 @@ export const ordersApi = {
   update: (id, info) => request(`/orders/${id}`, { method: 'PATCH', body: info }),
   finalize: (id) => request(`/orders/${id}/finalize`, { method: 'PATCH' }),
   advanceStage: (id) => request(`/orders/${id}/advance-stage`, { method: 'PATCH' }),
+  regressStage: (id) => request(`/orders/${id}/regress-stage`, { method: 'PATCH' }),
 }
 
 export const productsApi = {
