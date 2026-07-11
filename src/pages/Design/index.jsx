@@ -14,11 +14,13 @@ const COLUMNS = [
 // caminhos de entrada: automático (pedido sai de Venda → todos os produtos
 // entram como 'pendente', fluxo normal) e manual (checkbox de retrabalho em
 // Produção → 'pendente' com o marcador de retrabalho, que vira badge no
-// card). Concluir o último produto de um pedido em Design avança o estágio
-// do pedido pra Aprovação automaticamente (gatilho no servidor). Lê direto
-// do cache compartilhado (useOrders), igual Produção — não existe um GET
-// /design-queue dedicado de propósito: os pedidos já estão no front, criar
-// outro endpoint seria uma segunda fonte de verdade sem necessidade.
+// card). Mover cards aqui empurra o estágio do pedido junto (gatilho no
+// servidor, remapeado 2026-07-11): o último produto a entrar em Aprovação
+// avança o pedido Design→Aprovação, e o último a Concluir avança
+// Aprovação→Em produção. Lê direto do cache compartilhado (useOrders),
+// igual Produção — não existe um GET /design-queue dedicado de propósito:
+// os pedidos já estão no front, criar outro endpoint seria uma segunda
+// fonte de verdade sem necessidade.
 function Design() {
   const { orders, setProductDesignStatus } = useOrders()
 

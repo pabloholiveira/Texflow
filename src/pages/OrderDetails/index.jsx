@@ -113,16 +113,26 @@ function OrderDetails() {
     )
   }
 
-  // Design → Aprovação é uma transição do sistema (dispara sozinha quando o
-  // último produto conclui o design), então o "Avançar etapa" fica
-  // desabilitado enquanto ainda há design em andamento. Se nada está
-  // pendente (ex: alguém voltou de Aprovação para Design por engano), o
-  // botão reabilita — senão o pedido ficaria preso sem ter o que concluir.
-  const designInProgress =
+  // Design → Aprovação e Aprovação → Em produção são transições do sistema
+  // (disparam sozinhas conforme os cards andam no kanban de design — ver o
+  // gatilho em PATCH /products/:id/design-status), então o "Avançar etapa"
+  // fica desabilitado enquanto a automação daquele estágio ainda tem
+  // trabalho pendente. Cada estágio espelha a condição do seu próprio
+  // gatilho; se nada está pendente (ex: alguém voltou o estágio por engano
+  // — a automação só dispara em MUDANÇA de status, então não re-avançaria
+  // sozinha), o botão reabilita, senão o pedido ficaria preso.
+  const waitingDesignApproval =
     order.stage === 'design' &&
+    order.products.some(
+      (item) =>
+        item.designStatus && !['aprovacao', 'concluido'].includes(item.designStatus)
+    )
+  const waitingDesignConclusion =
+    order.stage === 'aprovacao' &&
     order.products.some(
       (item) => item.designStatus && item.designStatus !== 'concluido'
     )
+  const autoAdvancePending = waitingDesignApproval || waitingDesignConclusion
 
   return (
     <Layout>
@@ -196,7 +206,7 @@ function OrderDetails() {
             <Button
               variant="secondary"
               onClick={() => advanceOrderStage(order.id)}
-              disabled={order.stage === 'producao' || designInProgress}
+              disabled={order.stage === 'producao' || autoAdvancePending}
             >
               Avançar etapa
             </Button>
@@ -217,10 +227,17 @@ function OrderDetails() {
           ))}
         </div>
 
-        {designInProgress && (
+        {waitingDesignApproval && (
           <p className="stage-hint">
-            O pedido avança para Aprovação automaticamente quando todos os
-            produtos concluírem o design.
+            O pedido avança para Aprovação automaticamente quando o design de
+            todos os produtos for enviado para aprovação do cliente.
+          </p>
+        )}
+
+        {waitingDesignConclusion && (
+          <p className="stage-hint">
+            O pedido avança para Em produção automaticamente quando o design
+            de todos os produtos for concluído.
           </p>
         )}
       </section>

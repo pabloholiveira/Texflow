@@ -51,15 +51,32 @@ router.patch(
         )
       }
 
-      // Gatilho 2 da integração Pedidos ↔ Design (CLAUDE.md, item 3.1):
-      // o ÚLTIMO produto do pedido a concluir design avança o pedido de
-      // 'design' pra 'aprovacao' automaticamente. Retrabalho não dispara
-      // nada aqui — o pedido de um retrabalho típico já está em 'producao',
-      // então o guard de stage segura.
-      if (status === 'concluido') {
+      // Gatilho 2 da integração Pedidos ↔ Design (remapeado 2026-07-11 —
+      // pedido do Pablo): cada avanço de coluna no kanban de design, de
+      // "Em Design" em diante, empurra o estágio do pedido junto. Duas
+      // checagens de ESTADO (não de transição), rodadas em sequência após
+      // qualquer mudança, na mesma transação:
+      //   1. todos os produtos em 'aprovacao' ou além  → design    → aprovacao
+      //   2. todos os produtos 'concluido'             → aprovacao → producao
+      // Rodar as duas em sequência cobre o caso de pulo (tudo já concluído
+      // com o pedido ainda em design avança duas vezes, direto a producao).
+      // Retrabalho não dispara nada aqui — o pedido de um retrabalho típico
+      // já está em 'producao', então os guards de stage seguram. E mover um
+      // card pra trás nunca regride estágio (não há UPDATE na outra direção).
+      if (from !== status) {
         await client.query(
           `UPDATE orders SET stage = 'aprovacao', updated_at = now()
            WHERE id = $1 AND stage = 'design'
+             AND NOT EXISTS (
+               SELECT 1 FROM products
+               WHERE order_id = $1
+                 AND (design_status IS NULL OR design_status NOT IN ('aprovacao', 'concluido'))
+             )`,
+          [orderId]
+        )
+        await client.query(
+          `UPDATE orders SET stage = 'producao', updated_at = now()
+           WHERE id = $1 AND stage = 'aprovacao'
              AND NOT EXISTS (
                SELECT 1 FROM products
                WHERE order_id = $1 AND design_status IS DISTINCT FROM 'concluido'
