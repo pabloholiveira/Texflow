@@ -9,6 +9,7 @@ import Textarea from '../../components/ui/Textarea'
 import ProductCard from '../../components/ui/ProductCard'
 import ProductFields from '../../components/ui/ProductFields'
 import PaymentFields from '../../components/ui/PaymentFields'
+import ClientAutocomplete from '../../components/ui/ClientAutocomplete'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
@@ -22,17 +23,57 @@ import { getClientDisplayName } from '../../data/clients'
 import { formatCurrency } from '../../utils/currency'
 import { buildWhatsAppMessage, buildWhatsAppLink } from '../../utils/whatsapp'
 
+const emptyClient = {
+  personName: '',
+  companyName: '',
+  document: '',
+  phone: '',
+  email: '',
+}
+
 function OrderDetails() {
   const { id } = useParams()
   const { orders, isLoading, advanceOrderStage, regressOrderStage, updateOrderInfo } =
     useOrders()
-  const { clients } = useClients()
+  const { clients, findOrCreateClient } = useClients()
   const { whatsappTemplate } = useSettings()
   const order = orders.find((item) => item.id === id)
   const client = order && clients.find((item) => item.id === order.clientId)
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [amountPaidDraft, setAmountPaidDraft] = useState(0)
+
+  const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false)
+  const [deadlineDraft, setDeadlineDraft] = useState('')
+  const [clientDraft, setClientDraft] = useState(null)
+
+  function openEditOrderModal() {
+    setDeadlineDraft(order.deadline || '')
+    setClientDraft(client || emptyClient)
+    setIsEditOrderModalOpen(true)
+  }
+
+  // Mesma cadeia que o NewOrder já usa ao finalizar: resolve o cliente
+  // primeiro (findOrCreateClient casa pelo CPF/CNPJ — se ninguém mexeu no
+  // cliente, devolve o mesmo id de volta; se trocou, devolve o do outro; se
+  // digitou um cliente inédito, cria) e só então grava o pedido.
+  async function saveOrderEdit() {
+    if (!clientDraft.personName || !clientDraft.document || !clientDraft.phone) {
+      alert('Preencha nome, CPF/CNPJ e telefone do cliente.')
+      return
+    }
+
+    const clientId = await findOrCreateClient(clientDraft)
+    if (!clientId) return
+
+    const updated = await updateOrderInfo(order.id, {
+      clientId,
+      // Campo opcional: '' não é uma DATE válida pro Postgres, então vira
+      // null (mesmo tratamento que unitPrice/vectorizationPrice já recebem).
+      deadline: deadlineDraft === '' ? null : deadlineDraft,
+    })
+    if (updated) setIsEditOrderModalOpen(false)
+  }
 
   function openPaymentModal() {
     setAmountPaidDraft(order.amountPaid)
@@ -148,7 +189,9 @@ function OrderDetails() {
               Enviar por WhatsApp
             </Button>
           )}
-          <button>Editar Pedido</button>
+          <Button variant="secondary" onClick={openEditOrderModal}>
+            Editar Pedido
+          </Button>
         </div>
       </div>
 
@@ -367,6 +410,39 @@ function OrderDetails() {
             Cancelar
           </Button>
           <Button onClick={confirmPayment}>Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isEditOrderModalOpen}
+        onClose={() => setIsEditOrderModalOpen(false)}
+        title="Editar Pedido"
+      >
+        {clientDraft && (
+          <>
+            <ClientAutocomplete
+              clients={clients}
+              client={clientDraft}
+              onChange={setClientDraft}
+              initiallySelected={Boolean(client)}
+            />
+
+            <div className="form-grid">
+              <Input
+                label="Prazo de entrega"
+                type="date"
+                value={deadlineDraft}
+                onChange={(event) => setDeadlineDraft(event.target.value)}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setIsEditOrderModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={saveOrderEdit}>Salvar</Button>
         </div>
       </Modal>
 

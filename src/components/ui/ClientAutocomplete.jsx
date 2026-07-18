@@ -12,9 +12,15 @@ const emptyClient = {
   email: '',
 }
 
-function ClientAutocomplete({ clients, client, onChange }) {
+// initiallySelected: começa no modo compacto ("cliente selecionado" +
+// "Trocar cliente") em vez do modo busca/cadastro. Serve pra quem já tem um
+// cliente vinculado (editar um pedido existente): sem isso os 5 campos
+// nasceriam editáveis e daria pra alterar o CPF do cliente sem querer,
+// achando que era só uma troca — que é justamente o que o modo compacto
+// evita. No cadastro de um pedido novo continua false (não há cliente ainda).
+function ClientAutocomplete({ clients, client, onChange, initiallySelected = false }) {
   const [search, setSearch] = useState('')
-  const [isSelected, setIsSelected] = useState(false)
+  const [isSelected, setIsSelected] = useState(initiallySelected)
 
   const query = search.trim().toLowerCase()
 
