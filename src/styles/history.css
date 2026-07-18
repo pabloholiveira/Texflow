@@ -1,0 +1,79 @@
+/* Timeline do pedido (item 3.3). Mesmo cartão branco arredondado dos
+   outros painéis da tela — só tokens de variables.css, nenhum hex solto. */
+
+.history-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-card);
+  margin-top: 24px;
+}
+
+.history-panel h2 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+
+.history-day + .history-day {
+  margin-top: 20px;
+}
+
+/* Cabeçalho de data: a hora de cada evento fica na linha, a data aparece
+   uma vez por dia (ver groupEventsByDay em utils/events.js). */
+.history-day h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.history-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+/* Largura fixa pra hora: alinha o texto dos eventos numa coluna só,
+   em vez de cada linha começar num ponto diferente. */
+.history-time {
+  flex-shrink: 0;
+  width: 44px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-text {
+  flex: 1;
+  color: var(--color-text);
+}
+
+.history-author {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-chip);
+  padding: 2px 10px;
+}
+
+.history-error {
+  color: var(--color-danger);
+}
+
+@media (max-width: 640px) {
+  .history-item {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+
+  .history-text {
+    flex-basis: 100%;
+    order: 3;
+  }
+}

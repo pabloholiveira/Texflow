@@ -9,6 +9,7 @@ import {
   findBlockingSteps,
   recalculateOrderTotal,
 } from '../db/ordersQueries.js'
+import { logEvent } from '../db/eventsQueries.js'
 
 const router = Router()
 
@@ -44,11 +45,13 @@ router.patch(
           status,
           req.params.id,
         ])
-        await client.query(
-          `INSERT INTO product_events (product_id, event_type, payload, created_by)
-           VALUES ($1, 'design_status_changed', $2, $3)`,
-          [req.params.id, JSON.stringify({ from, to: status, trigger: 'manual' }), req.user.username]
-        )
+        await logEvent(client, {
+          orderId,
+          productId: req.params.id,
+          type: 'design_status_changed',
+          payload: { from, to: status, trigger: 'manual' },
+          user: req.user.username,
+        })
       }
 
       // Gatilho 2 da integração Pedidos ↔ Design (remapeado 2026-07-11 —
@@ -64,7 +67,7 @@ router.patch(
       // já está em 'producao', então os guards de stage seguram. E mover um
       // card pra trás nunca regride estágio (não há UPDATE na outra direção).
       if (from !== status) {
-        await client.query(
+        const toApproval = await client.query(
           `UPDATE orders SET stage = 'aprovacao', updated_at = now()
            WHERE id = $1 AND stage = 'design'
              AND NOT EXISTS (
@@ -74,7 +77,7 @@ router.patch(
              )`,
           [orderId]
         )
-        await client.query(
+        const toProduction = await client.query(
           `UPDATE orders SET stage = 'producao', updated_at = now()
            WHERE id = $1 AND stage = 'aprovacao'
              AND NOT EXISTS (
@@ -83,6 +86,27 @@ router.patch(
              )`,
           [orderId]
         )
+
+        // Avanço automático também entra no histórico, e marcado como
+        // trigger 'design' — senão a timeline mostraria o pedido mudando de
+        // estágio sozinho, sem explicar por quê. rowCount diz se o UPDATE
+        // realmente pegou (as condições acima podem não ter sido satisfeitas).
+        if (toApproval.rowCount > 0) {
+          await logEvent(client, {
+            orderId,
+            type: 'order_stage_changed',
+            payload: { from: 'design', to: 'aprovacao', direction: 'forward', trigger: 'design' },
+            user: req.user.username,
+          })
+        }
+        if (toProduction.rowCount > 0) {
+          await logEvent(client, {
+            orderId,
+            type: 'order_stage_changed',
+            payload: { from: 'aprovacao', to: 'producao', direction: 'forward', trigger: 'design' },
+            user: req.user.username,
+          })
+        }
       }
 
       const orderStage = await client.query('SELECT stage FROM orders WHERE id = $1', [orderId])
@@ -131,27 +155,20 @@ router.patch(
       )
 
       if (newStatus !== from) {
-        await client.query(
-          `INSERT INTO product_events (product_id, event_type, payload, created_by)
-           VALUES ($1, 'design_status_changed', $2, $3)`,
-          [
-            req.params.id,
-            JSON.stringify({ from, to: newStatus, trigger: 'rework-checkbox' }),
-            req.user.username,
-          ]
-        )
+        await logEvent(client, {
+          productId: req.params.id,
+          type: 'design_status_changed',
+          payload: { from, to: newStatus, trigger: 'rework-checkbox' },
+          user: req.user.username,
+        })
       }
       if (value !== wasRework) {
-        await client.query(
-          `INSERT INTO product_events (product_id, event_type, payload, created_by)
-           VALUES ($1, $2, $3, $4)`,
-          [
-            req.params.id,
-            value ? 'design_rework_flagged' : 'design_rework_unflagged',
-            JSON.stringify({ designStatus: newStatus }),
-            req.user.username,
-          ]
-        )
+        await logEvent(client, {
+          productId: req.params.id,
+          type: value ? 'design_rework_flagged' : 'design_rework_unflagged',
+          payload: { designStatus: newStatus },
+          user: req.user.username,
+        })
       }
 
       return getProductById(client, req.params.id)
@@ -198,6 +215,14 @@ router.patch(
       )
       if (updated.rows.length === 0) return null
 
+      await logEvent(client, {
+        orderId: updated.rows[0].order_id,
+        productId: req.params.id,
+        type: 'product_updated',
+        payload: { fields: updates.map(([key]) => key) },
+        user: req.user.username,
+      })
+
       const orderTotalValue = await recalculateOrderTotal(client, updated.rows[0].order_id)
       return { product: await getProductById(client, req.params.id), orderTotalValue }
     })
@@ -216,12 +241,25 @@ router.delete(
     // depois — por isso virou uma transação em vez de um DELETE isolado.
     const result = await withTransaction(async (client) => {
       const deleted = await client.query(
-        'DELETE FROM products WHERE id = $1 RETURNING order_id',
+        'DELETE FROM products WHERE id = $1 RETURNING order_id, type, model, quantity',
         [req.params.id]
       )
       if (deleted.rows.length === 0) return null
 
-      const totalValue = await recalculateOrderTotal(client, deleted.rows[0].order_id)
+      const { order_id: orderId, type, model, quantity } = deleted.rows[0]
+
+      // product_id fica NULL de propósito: o FK é ON DELETE CASCADE, então
+      // um evento apontando para o produto recém-excluído sumiria junto com
+      // ele — justamente o evento que mais importa preservar. A descrição do
+      // produto vai no payload, única fonte que sobra depois da exclusão.
+      await logEvent(client, {
+        orderId,
+        type: 'product_removed',
+        payload: { type, model, quantity },
+        user: req.user.username,
+      })
+
+      const totalValue = await recalculateOrderTotal(client, orderId)
       return { totalValue }
     })
 
@@ -264,6 +302,15 @@ router.put(
           'DELETE FROM product_workflow_steps WHERE product_id = $1 AND step_name = ANY($2::text[])',
           [productId, toRemove]
         )
+      }
+
+      if (toAdd.length > 0 || toRemove.length > 0) {
+        await logEvent(client, {
+          productId,
+          type: 'product_operations_changed',
+          payload: { added: toAdd, removed: toRemove },
+          user: req.user.username,
+        })
       }
 
       return getProductById(client, productId)
@@ -312,9 +359,17 @@ router.patch(
     const nextStatus =
       direction === 'forward' ? getNextStatus(previousStatus) : getPreviousStatus(previousStatus)
 
-    // Status e evento gravados juntos, na mesma transação: os Relatórios
+    // Status e eventos gravados juntos, na mesma transação: os Relatórios
     // (tempo médio por etapa, gargalos) dependem desse log estar sempre
     // consistente com o status atual — ver product_workflow_events no schema.
+    //
+    // A transição é gravada em DUAS tabelas de propósito (decisão do Pablo,
+    // item 3.3): product_workflow_events continua sendo a fonte especializada
+    // dos Relatórios (com a query de LAG() já verificada, que não vale a pena
+    // arriscar), e product_events recebe a mesma informação para a timeline
+    // do pedido ler tudo de uma fonte só. É duplicação de dado, mas este é o
+    // ÚNICO lugar do sistema que muda status de etapa, então as duas não têm
+    // como divergir sem alguém mexer justamente aqui.
     await withTransaction(async (client) => {
       await client.query(
         'UPDATE product_workflow_steps SET status = $1 WHERE product_id = $2 AND step_name = $3',
@@ -324,6 +379,12 @@ router.patch(
         'INSERT INTO product_workflow_events (workflow_step_id, from_status, to_status) VALUES ($1, $2, $3)',
         [current.rows[0].workflow_step_id, previousStatus, nextStatus]
       )
+      await logEvent(client, {
+        productId: id,
+        type: 'workflow_step_changed',
+        payload: { step, from: previousStatus, to: nextStatus, direction },
+        user: req.user.username,
+      })
     })
 
     res.json(await getProductById(pool, id))

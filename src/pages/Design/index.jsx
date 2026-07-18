@@ -2,13 +2,7 @@ import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
 import { useOrders } from '../../context/ordersContext'
-
-const COLUMNS = [
-  { status: 'pendente', label: 'Pendente' },
-  { status: 'em_design', label: 'Em design' },
-  { status: 'aprovacao', label: 'Aprovação' },
-  { status: 'concluido', label: 'Concluído' },
-]
+import { DESIGN_STATUSES } from '../../data/designStatuses'
 
 // Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
 // caminhos de entrada: automático (pedido sai de Venda → todos os produtos
@@ -46,13 +40,13 @@ function Design() {
       </div>
 
       <div className="kanban-board design-board">
-        {COLUMNS.map((column) => {
+        {DESIGN_STATUSES.map((column) => {
           const items = queue.filter(
-            (item) => item.product.designStatus === column.status
+            (item) => item.product.designStatus === column.value
           )
 
           return (
-            <div className="kanban-column" key={column.status}>
+            <div className="kanban-column" key={column.value}>
               <h2>{column.label}</h2>
 
               {items.length === 0 && (

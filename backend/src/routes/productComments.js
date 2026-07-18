@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { mapComment } from '../db/ordersQueries.js'
+import { withTransaction } from '../db/withTransaction.js'
+import { logEvent } from '../db/eventsQueries.js'
 
 // Montado em app.js como '/products/:productId/comments' — mergeParams
 // permite ler req.params.productId aqui, mesmo essa rota sendo definida
@@ -36,11 +38,25 @@ router.post(
       return res.status(404).json({ error: 'Produto não encontrado' })
     }
 
-    const result = await pool.query(
-      'INSERT INTO product_comments (product_id, author, text) VALUES ($1, $2, $3) RETURNING *',
-      [productId, author, text]
-    )
-    res.status(201).json(mapComment(result.rows[0]))
+    const comment = await withTransaction(async (client) => {
+      const result = await client.query(
+        'INSERT INTO product_comments (product_id, author, text) VALUES ($1, $2, $3) RETURNING *',
+        [productId, author, text]
+      )
+
+      // Só a marcação na linha do tempo — o texto do comentário continua
+      // morando em product_comments, não é copiado para o payload.
+      await logEvent(client, {
+        productId,
+        type: 'comment_added',
+        payload: { author },
+        user: req.user.username,
+      })
+
+      return result.rows[0]
+    })
+
+    res.status(201).json(mapComment(comment))
   })
 )
 

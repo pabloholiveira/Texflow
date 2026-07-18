@@ -10,6 +10,7 @@ import ProductCard from '../../components/ui/ProductCard'
 import ProductFields from '../../components/ui/ProductFields'
 import PaymentFields from '../../components/ui/PaymentFields'
 import ClientAutocomplete from '../../components/ui/ClientAutocomplete'
+import OrderHistory from '../../components/ui/OrderHistory'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
@@ -304,6 +305,14 @@ function OrderDetails() {
             onOpenFiles={openFilesModal}
           />
         ))}
+      </section>
+
+      <section className="history-panel">
+        <h2>Histórico</h2>
+        {/* refreshToken = o próprio pedido: toda mutação o substitui no
+            cache do OrdersProvider, então o histórico se atualiza sozinho
+            depois de cada ação feita nesta tela. */}
+        <OrderHistory orderId={order.id} refreshToken={order} />
       </section>
 
       <Modal

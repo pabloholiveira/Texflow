@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { getProductById, recalculateOrderTotal } from '../db/ordersQueries.js'
+import { logEvent } from '../db/eventsQueries.js'
 
 // Montado em app.js como '/orders/:orderId/products' — mergeParams é o
 // que permite ler req.params.orderId aqui dentro, já que essa rota é
@@ -58,16 +59,22 @@ router.post(
       )
       const productId = inserted.rows[0].id
 
+      await logEvent(client, {
+        orderId,
+        productId,
+        type: 'product_created',
+        payload: { type, model, quantity, operations },
+        user: req.user.username,
+      })
+
       if (bornInDesign) {
-        await client.query(
-          `INSERT INTO product_events (product_id, event_type, payload, created_by)
-           VALUES ($1, 'design_status_changed', $2, $3)`,
-          [
-            productId,
-            JSON.stringify({ from: null, to: 'pendente', trigger: 'order-stage' }),
-            req.user.username,
-          ]
-        )
+        await logEvent(client, {
+          orderId,
+          productId,
+          type: 'design_status_changed',
+          payload: { from: null, to: 'pendente', trigger: 'order-stage' },
+          user: req.user.username,
+        })
       }
 
       // Operações escolhidas na criação sempre entram como 'pending' —

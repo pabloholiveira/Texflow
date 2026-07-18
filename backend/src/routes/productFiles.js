@@ -3,6 +3,8 @@ import multer from 'multer'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { mapFile } from '../db/ordersQueries.js'
+import { withTransaction } from '../db/withTransaction.js'
+import { logEvent } from '../db/eventsQueries.js'
 import { uploadBuffer } from '../services/cloudinary.js'
 
 // Montado em app.js como '/products/:productId/files' — mesmo padrão de
@@ -51,13 +53,24 @@ router.post(
       folder: `texflow/products/${productId}`,
     })
 
-    const result = await pool.query(
-      `INSERT INTO product_files (product_id, category, file_name, file_url, file_type, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [productId, category, req.file.originalname, uploaded.secure_url, req.file.mimetype, uploadedBy || null]
-    )
+    const file = await withTransaction(async (client) => {
+      const result = await client.query(
+        `INSERT INTO product_files (product_id, category, file_name, file_url, file_type, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [productId, category, req.file.originalname, uploaded.secure_url, req.file.mimetype, uploadedBy || null]
+      )
 
-    res.status(201).json(mapFile(result.rows[0]))
+      await logEvent(client, {
+        productId,
+        type: 'file_uploaded',
+        payload: { category, fileName: req.file.originalname },
+        user: req.user.username,
+      })
+
+      return result.rows[0]
+    })
+
+    res.status(201).json(mapFile(file))
   })
 )
 
