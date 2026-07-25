@@ -75,7 +75,7 @@ function Design() {
                   </p>
 
                   <div className="kanban-card-actions">
-                    {column.status === 'pendente' && (
+                    {column.value === 'pendente' && (
                       <Button
                         variant="secondary"
                         onClick={() =>
@@ -86,7 +86,7 @@ function Design() {
                       </Button>
                     )}
 
-                    {column.status === 'em_design' && (
+                    {column.value === 'em_design' && (
                       <>
                         <Button
                           variant="secondary"
@@ -106,7 +106,7 @@ function Design() {
                       </>
                     )}
 
-                    {column.status === 'aprovacao' && (
+                    {column.value === 'aprovacao' && (
                       <>
                         <Button
                           variant="secondary"
@@ -126,7 +126,7 @@ function Design() {
                       </>
                     )}
 
-                    {column.status === 'concluido' && (
+                    {column.value === 'concluido' && (
                       <Button
                         variant="secondary"
                         onClick={() =>
