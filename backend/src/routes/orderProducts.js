@@ -34,10 +34,25 @@ router.post(
       const orderCheck = await client.query('SELECT id, stage FROM orders WHERE id = $1', [orderId])
       if (orderCheck.rows.length === 0) return null
 
-      // Produto criado num pedido que JÁ está em design entra direto na
-      // fila (fluxo normal, não retrabalho) — senão ficaria invisível pro
-      // designer. Ver gatilho 1 em orders.js/advance-stage.
-      const bornInDesign = orderCheck.rows[0].stage === 'design'
+      // Produto criado num pedido que já saiu de Venda entra direto na fila
+      // de design (fluxo normal, não retrabalho) — senão ficaria invisível
+      // pro designer. Ver gatilho 1 em orders.js/advance-stage.
+      //
+      // O teste aqui é "saiu de Venda", NÃO "está em Design": os gatilhos do
+      // kanban de design avançam o estágio do pedido sozinhos, então quando
+      // alguém adiciona um produto o pedido já pode ter passado para
+      // Aprovação ou Produção. Enquanto isto checava stage === 'design', o
+      // produto novo nascia fora da fila nesses dois casos e ninguém do
+      // design ficava sabendo dele (relatado pelo Pablo em 2026-07-25).
+      // Produto novo sempre precisa de arte — o designer nunca viu aquela
+      // peça — e isso vale igual em qualquer estágio depois da venda.
+      //
+      // O estágio do pedido NÃO regride por causa disso (decisão do Pablo):
+      // os outros produtos podem já estar em produção de verdade. Um pedido
+      // em Aprovação, porém, deixa de avançar sozinho para Produção até o
+      // produto novo concluir o design, porque o gatilho 2 exige TODOS os
+      // produtos em 'concluido' — o freio sai de graça, sem regra nova.
+      const entersDesignQueue = orderCheck.rows[0].stage !== 'venda'
 
       const inserted = await client.query(
         `INSERT INTO products
@@ -54,7 +69,7 @@ router.post(
           unitPrice,
           needsVectorization,
           vectorizationPrice,
-          bornInDesign ? 'pendente' : null,
+          entersDesignQueue ? 'pendente' : null,
         ]
       )
       const productId = inserted.rows[0].id
@@ -67,7 +82,7 @@ router.post(
         user: req.user.username,
       })
 
-      if (bornInDesign) {
+      if (entersDesignQueue) {
         await logEvent(client, {
           orderId,
           productId,
