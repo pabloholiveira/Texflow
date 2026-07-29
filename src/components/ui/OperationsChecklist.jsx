@@ -44,6 +44,7 @@ function OperationsChecklist({ selectedSteps, onChange }) {
       <div className="operation-custom">
         <input
           type="text"
+          aria-label="Outra operação"
           placeholder="Outra operação"
           value={customStep}
           onChange={(event) => setCustomStep(event.target.value)}

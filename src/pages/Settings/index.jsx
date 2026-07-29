@@ -255,6 +255,7 @@ function Settings() {
           <div className="operation-custom">
             <input
               type="text"
+              aria-label="Nome da nova operação"
               placeholder="Ex: Aplicação de strass"
               value={newOperation}
               onChange={(event) => setNewOperation(event.target.value)}
@@ -262,6 +263,7 @@ function Settings() {
 
             <input
               type="number"
+              aria-label="Posição da nova operação (opcional)"
               placeholder="Posição (opcional)"
               value={newPosition}
               onChange={(event) => setNewPosition(event.target.value)}
@@ -355,6 +357,7 @@ function Settings() {
 
                 <div className="modal-actions">
                   <select
+                    aria-label={`Papel de ${item.username}`}
                     value={item.role}
                     onChange={(event) =>
                       handleChangeRole(item, event.target.value)

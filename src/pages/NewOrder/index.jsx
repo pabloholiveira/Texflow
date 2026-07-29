@@ -9,11 +9,14 @@ import OperationsChecklist from '../../components/ui/OperationsChecklist'
 import Textarea from '../../components/ui/Textarea'
 import ClientAutocomplete from '../../components/ui/ClientAutocomplete'
 import ProductFields from '../../components/ui/ProductFields'
+import FileInput from '../../components/ui/FileInput'
+import Select from '../../components/ui/Select'
 import PaymentFields from '../../components/ui/PaymentFields'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
 import { formatCurrency } from '../../utils/currency'
+import { FILE_CATEGORIES, getFileCategoryLabel } from '../../data/fileCategories'
 
 const emptyClient = {
   personName: '',
@@ -228,16 +231,13 @@ function NewOrder() {
           <>
             <ProductFields product={product} onChange={handleChange} />
 
-            <div className="input-group">
-              <label>Referências (fotos, logo do cliente, tom de tecido)</label>
-              <input
-                type="file"
-                onChange={(event) => {
-                  if (event.target.files[0]) addReferenceFile(event.target.files[0])
-                  event.target.value = ''
-                }}
-              />
-            </div>
+            <FileInput
+              label="Referências (fotos, logo do cliente, tom de tecido)"
+              onChange={(event) => {
+                if (event.target.files[0]) addReferenceFile(event.target.files[0])
+                event.target.value = ''
+              }}
+            />
 
             {referenceFiles.length > 0 && (
               <ul className="reference-files-list">
@@ -398,21 +398,19 @@ function NewOrder() {
                     {file.fileName}
                   </a>
                 </strong>
-                <span>
-                  {file.category === 'referencia' ? 'Referência' : 'Layout aprovado'}
-                </span>
+                <span>{getFileCategoryLabel(file.category)}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="input-group">
-          <label>Categoria</label>
-          <select name="category" value={fileDraft.category} onChange={handleFileDraftChange}>
-            <option value="referencia">Referência</option>
-            <option value="layout_aprovado">Layout aprovado</option>
-          </select>
-        </div>
+        <Select
+          label="Categoria"
+          name="category"
+          value={fileDraft.category}
+          onChange={handleFileDraftChange}
+          options={FILE_CATEGORIES}
+        />
 
         <Input
           label="Enviado por"
@@ -422,10 +420,7 @@ function NewOrder() {
           onChange={handleFileDraftChange}
         />
 
-        <div className="input-group">
-          <label>Arquivo</label>
-          <input type="file" onChange={handleFileSelect} />
-        </div>
+        <FileInput label="Arquivo" onChange={handleFileSelect} />
 
         <div className="modal-actions">
           <Button variant="secondary" onClick={closeFilesModal}>

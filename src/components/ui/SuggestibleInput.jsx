@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 
 function SuggestibleInput({
   label,
@@ -9,6 +9,8 @@ function SuggestibleInput({
   suggestions,
 }) {
   const [isFocused, setIsFocused] = useState(false)
+  // Ver comentário em Input.jsx sobre por que o id vem do useId.
+  const id = useId()
 
   const query = value.trim().toLowerCase()
 
@@ -29,9 +31,10 @@ function SuggestibleInput({
 
   return (
     <div className="input-group suggestible-input">
-      <label>{label}</label>
+      <label htmlFor={id}>{label}</label>
 
       <input
+        id={id}
         name={name}
         placeholder={placeholder}
         value={value}
