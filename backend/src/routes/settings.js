@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { ADMIN_ONLY } from '../auth/permissions.js'
 
 const router = Router()
 
@@ -28,6 +30,7 @@ router.get(
 
 router.put(
   '/whatsapp-template',
+  requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
     const { value } = req.body
     if (!value) return res.status(400).json({ error: 'value é obrigatório' })

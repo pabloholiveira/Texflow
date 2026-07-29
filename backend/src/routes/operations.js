@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { ADMIN_ONLY } from '../auth/permissions.js'
 
 const router = Router()
 
@@ -20,6 +22,7 @@ router.get(
 
 router.post(
   '/',
+  requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
     const { name, position = null } = req.body
     if (!name) return res.status(400).json({ error: 'name é obrigatório' })
@@ -48,6 +51,7 @@ router.post(
 // roteamento, já que o Express trata "/" como separador de path.
 router.delete(
   '/:id',
+  requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
     const result = await pool.query('DELETE FROM operations WHERE id = $1', [req.params.id])
     if (result.rowCount === 0) return res.status(404).json({ error: 'Operação não encontrada' })

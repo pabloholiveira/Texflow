@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import { useOrders } from '../../context/ordersContext'
 import { useOperations } from '../../context/operationsContext'
+import { useAuth } from '../../context/authContext'
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pendente' },
@@ -20,6 +21,11 @@ function Production() {
   const { orders, moveProductStepStatus, toggleProductDesignRework } =
     useOrders()
   const { operations } = useOperations()
+  // canOperateStep espelha o gate do backend: além do papel, um usuário de
+  // produção só mexe nas etapas atribuídas a ele. Precisa do catálogo
+  // (`operations`) porque etapa fora dele — a "outra operação" digitada na
+  // venda — é livre pra qualquer um da produção.
+  const { can, canOperateStep } = useAuth()
   const [detailTarget, setDetailTarget] = useState(null)
   const [searchParams] = useSearchParams()
 
@@ -61,6 +67,11 @@ function Production() {
       stage: product.workflow.find((stage) => stage.step === selectedOperation),
     }))
     .filter((item) => item.stage)
+
+  // Uma checagem só para a aba aberta (todos os cards da coluna são da mesma
+  // etapa); no modal de detalhe a checagem é por etapa, já que ele lista
+  // todas as operações do produto de uma vez.
+  const canMoveSelected = canOperateStep(selectedOperation, operations)
 
   const detailProduct = detailTarget
     ? allProducts.find(
@@ -126,7 +137,7 @@ function Production() {
                   )}
 
                   <div className="kanban-card-actions">
-                    {column.key !== 'pending' && (
+                    {canMoveSelected && column.key !== 'pending' && (
                       <Button
                         variant="secondary"
                         onClick={() =>
@@ -142,7 +153,7 @@ function Production() {
                       </Button>
                     )}
 
-                    {column.key !== 'done' && (
+                    {canMoveSelected && column.key !== 'done' && (
                       <Button
                         variant="secondary"
                         onClick={() =>
@@ -189,53 +200,59 @@ function Production() {
                   </div>
 
                   <div className="product-detail-stage-actions">
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        moveProductStepStatus(
-                          detailProduct.orderId,
-                          detailProduct.id,
-                          stage.step,
-                          'backward'
-                        )
-                      }
-                      disabled={stage.status === 'pending'}
-                    >
-                      Voltar
-                    </Button>
+                    {canOperateStep(stage.step, operations) && (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          moveProductStepStatus(
+                            detailProduct.orderId,
+                            detailProduct.id,
+                            stage.step,
+                            'backward'
+                          )
+                        }
+                        disabled={stage.status === 'pending'}
+                      >
+                        Voltar
+                      </Button>
+                    )}
 
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        moveProductStepStatus(
-                          detailProduct.orderId,
-                          detailProduct.id,
-                          stage.step,
-                          'forward'
-                        )
-                      }
-                      disabled={stage.status === 'done'}
-                    >
-                      Avançar
-                    </Button>
+                    {canOperateStep(stage.step, operations) && (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          moveProductStepStatus(
+                            detailProduct.orderId,
+                            detailProduct.id,
+                            stage.step,
+                            'forward'
+                          )
+                        }
+                        disabled={stage.status === 'done'}
+                      >
+                        Avançar
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
-            <label className="rework-flag">
-              <input
-                type="checkbox"
-                checked={!!detailProduct.needsDesignRework}
-                onChange={() =>
-                  toggleProductDesignRework(
-                    detailProduct.orderId,
-                    detailProduct.id
-                  )
-                }
-              />
-              Precisa retrabalho de design
-            </label>
+            {can('design.rework') && (
+              <label className="rework-flag">
+                <input
+                  type="checkbox"
+                  checked={!!detailProduct.needsDesignRework}
+                  onChange={() =>
+                    toggleProductDesignRework(
+                      detailProduct.orderId,
+                      detailProduct.id
+                    )
+                  }
+                />
+                Precisa retrabalho de design
+              </label>
+            )}
           </>
         )}
       </Modal>

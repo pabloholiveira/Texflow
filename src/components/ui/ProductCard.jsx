@@ -1,5 +1,6 @@
 import Button from './Button'
 import { formatCurrency } from '../../utils/currency'
+import { useAuth } from '../../context/authContext'
 
 function getOverallStatus(workflow) {
   if (!workflow || workflow.length === 0) {
@@ -19,6 +20,13 @@ function getOverallStatus(workflow) {
 
 function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, onOpenFiles }) {
   const overallStatus = getOverallStatus(product.workflow)
+  // O card lê a permissão direto do contexto em vez de receber por prop: ele
+  // é usado em três telas (NewOrder, OrderDetails e o modal de Produção), e
+  // todas as três teriam que repassar a mesma coisa. Comentários e arquivos
+  // ficam com todo mundo — quem está na produção precisa registrar ocorrência
+  // e consultar o layout aprovado.
+  const { can } = useAuth()
+  const canWrite = can('orders.write')
 
   return (
     <div className="product-card">
@@ -97,13 +105,17 @@ function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, on
       )}
 
       <div className="product-card-actions">
-        <Button variant="secondary" onClick={() => onEdit(product)}>
-          Editar Etapas
-        </Button>
+        {canWrite && (
+          <Button variant="secondary" onClick={() => onEdit(product)}>
+            Editar Etapas
+          </Button>
+        )}
 
-        <Button variant="secondary" onClick={() => onEditInfo(product)}>
-          Editar Dados
-        </Button>
+        {canWrite && (
+          <Button variant="secondary" onClick={() => onEditInfo(product)}>
+            Editar Dados
+          </Button>
+        )}
 
         <Button variant="secondary" onClick={() => onOpenComments(product)}>
           Comentários{product.comments?.length > 0 ? ` (${product.comments.length})` : ''}
@@ -113,9 +125,11 @@ function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, on
           Arquivos{product.files?.length > 0 ? ` (${product.files.length})` : ''}
         </Button>
 
-        <Button variant="danger" onClick={() => onRemove(product.id)}>
-          Excluir
-        </Button>
+        {canWrite && (
+          <Button variant="danger" onClick={() => onRemove(product.id)}>
+            Excluir
+          </Button>
+        )}
       </div>
     </div>
   )

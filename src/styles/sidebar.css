@@ -94,12 +94,21 @@
 }
 
 .sidebar-user > span {
+  display: flex;
+  flex-direction: column;
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Papel do usuário logado, abaixo do nome. */
+.sidebar-user-role {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
 }
 
 .sidebar-user button {

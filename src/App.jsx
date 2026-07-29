@@ -31,13 +31,16 @@ function App() {
                   <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
                   <Route path="/pedidos" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                  <Route path="/pedidos/novo" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
+                  <Route path="/pedidos/novo" element={<ProtectedRoute action="orders.write"><NewOrder /></ProtectedRoute>} />
                   <Route path="/pedidos/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
 
-                  <Route path="/clientes" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+                  <Route path="/clientes" element={<ProtectedRoute action="clients.manage"><Clients /></ProtectedRoute>} />
+                  {/* /design e /producao ficam abertas a todo mundo de propósito:
+                      a matriz é "leitura ampla, escrita por setor" — quem não é do
+                      setor vê o andamento, mas os botões de mover não aparecem. */}
                   <Route path="/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
                   <Route path="/producao" element={<ProtectedRoute><Production /></ProtectedRoute>} />
-                  <Route path="/relatorios" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                  <Route path="/relatorios" element={<ProtectedRoute action="reports.view"><Reports /></ProtectedRoute>} />
                   <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 </Routes>
               </BrowserRouter>

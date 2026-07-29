@@ -4,6 +4,8 @@ import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { fetchOrders, mapOrder, ORDER_STAGES } from '../db/ordersQueries.js'
 import { logEvent, fetchOrderEvents } from '../db/eventsQueries.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { SALES_ROLES } from '../auth/permissions.js'
 
 const router = Router()
 
@@ -25,6 +27,7 @@ router.get(
 
 router.post(
   '/',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const { clientId = null, deadline = null } = req.body
 
@@ -63,6 +66,7 @@ router.post(
 
 router.patch(
   '/:id',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const columnMap = { clientId: 'client_id', deadline: 'deadline', amountPaid: 'amount_paid' }
     const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
@@ -112,6 +116,7 @@ router.patch(
 
 router.patch(
   '/:id/finalize',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const finalized = await withTransaction(async (client) => {
       const result = await client.query(
@@ -137,6 +142,7 @@ router.patch(
 
 router.patch(
   '/:id/advance-stage',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const current = await pool.query('SELECT stage FROM orders WHERE id = $1', [req.params.id])
     if (current.rows.length === 0) return res.status(404).json({ error: 'Pedido não encontrado' })
@@ -195,6 +201,7 @@ router.patch(
 // PATCH /products/:id/design-status) dispara normalmente.
 router.patch(
   '/:id/regress-stage',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const current = await pool.query('SELECT stage FROM orders WHERE id = $1', [req.params.id])
     if (current.rows.length === 0) return res.status(404).json({ error: 'Pedido não encontrado' })

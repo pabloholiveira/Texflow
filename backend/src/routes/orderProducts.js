@@ -3,6 +3,8 @@ import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { getProductById, recalculateOrderTotal } from '../db/ordersQueries.js'
 import { logEvent } from '../db/eventsQueries.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { SALES_ROLES } from '../auth/permissions.js'
 
 // Montado em app.js como '/orders/:orderId/products' — mergeParams é o
 // que permite ler req.params.orderId aqui dentro, já que essa rota é
@@ -11,6 +13,7 @@ const router = Router({ mergeParams: true })
 
 router.post(
   '/',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const { orderId } = req.params
     const {

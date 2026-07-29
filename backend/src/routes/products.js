@@ -10,6 +10,9 @@ import {
   recalculateOrderTotal,
 } from '../db/ordersQueries.js'
 import { logEvent } from '../db/eventsQueries.js'
+import { canOperateStep } from '../db/usersQueries.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { SALES_ROLES, DESIGN_ROLES, PRODUCTION_ROLES } from '../auth/permissions.js'
 
 const router = Router()
 
@@ -21,6 +24,7 @@ const DESIGN_STATUSES = ['pendente', 'em_design', 'aprovacao', 'concluido']
 
 router.patch(
   '/:id/design-status',
+  requireRole(...DESIGN_ROLES),
   asyncHandler(async (req, res) => {
     const { status } = req.body
 
@@ -127,8 +131,13 @@ router.patch(
 // card ainda estava 'pendente' (ninguém começou), sai da fila junto — um
 // flag acidental não deixa lixo; se já estava em andamento, o card fica na
 // coluna onde está (só perde o marcador de retrabalho).
+// Marcar retrabalho é originar uma demanda de design — quem descobre isso é
+// quem fala com o cliente (vendedora) ou o próprio designer, não a produção.
+// Por isso SALES_ROLES e não DESIGN_ROLES, mesmo o checkbox morando na tela
+// de Produção.
 router.patch(
   '/:id/design-rework',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const { value } = req.body
 
@@ -181,6 +190,7 @@ router.patch(
 
 router.patch(
   '/:id',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const columnMap = {
       type: 'type',
@@ -234,6 +244,7 @@ router.patch(
 
 router.delete(
   '/:id',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     // ON DELETE CASCADE em product_workflow_steps e product_comments
     // (schema.sql) já cuida de limpar o que depende deste produto.
@@ -268,8 +279,12 @@ router.delete(
   })
 )
 
+// Escolher QUAIS operações o produto precisa é decisão de venda (domain model
+// no CLAUDE.md), não de produção — por isso SALES_ROLES aqui, enquanto mover
+// o STATUS de uma etapa (rota logo abaixo) é PRODUCTION_ROLES.
 router.put(
   '/:id/workflow',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const productId = req.params.id
     const desired = new Set(req.body.operations || [])
@@ -323,9 +338,20 @@ router.put(
 
 router.patch(
   '/:id/workflow/:step',
+  requireRole(...PRODUCTION_ROLES),
   asyncHandler(async (req, res) => {
     const { id, step } = req.params
     const { direction } = req.body
+
+    // Gate de AUTORIZAÇÃO (migration 0005): o requireRole acima já garantiu
+    // que é admin ou produção; aqui checa se ESTA pessoa opera ESTA etapa.
+    // Vem antes de qualquer leitura do produto — não faz sentido calcular
+    // sequência de quem não pode mexer de todo jeito.
+    if (!(await canOperateStep(req.user, step))) {
+      return res.status(403).json({
+        error: `Você não tem permissão para operar a etapa "${step}"`,
+      })
+    }
 
     const current = await pool.query(
       'SELECT id AS workflow_step_id, status FROM product_workflow_steps WHERE product_id = $1 AND step_name = $2',

@@ -15,6 +15,7 @@ import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
 import { useSettings } from '../../context/settingsContext'
+import { useAuth } from '../../context/authContext'
 import {
   ORDER_STAGES,
   getStageState,
@@ -38,6 +39,10 @@ function OrderDetails() {
     useOrders()
   const { clients, findOrCreateClient } = useClients()
   const { whatsappTemplate } = useSettings()
+  // Uma permissão só governa a tela inteira: editar pedido, pagamento,
+  // avançar/voltar etapa e adicionar produto são todos "mexer no pedido".
+  const { can } = useAuth()
+  const canWrite = can('orders.write')
   const order = orders.find((item) => item.id === id)
   const client = order && clients.find((item) => item.id === order.clientId)
 
@@ -184,16 +189,18 @@ function OrderDetails() {
           <p>{getClientDisplayName(client)}</p>
         </div>
 
-        <div className="page-header-actions">
-          {client?.phone && (
-            <Button variant="secondary" onClick={handleSendWhatsApp}>
-              Enviar por WhatsApp
+        {canWrite && (
+          <div className="page-header-actions">
+            {client?.phone && (
+              <Button variant="secondary" onClick={handleSendWhatsApp}>
+                Enviar por WhatsApp
+              </Button>
+            )}
+            <Button variant="secondary" onClick={openEditOrderModal}>
+              Editar Pedido
             </Button>
-          )}
-          <Button variant="secondary" onClick={openEditOrderModal}>
-            Editar Pedido
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
 
       <section className="order-info">
@@ -227,34 +234,38 @@ function OrderDetails() {
           <strong>{formatCurrency(Math.max(order.totalValue - order.amountPaid, 0))}</strong>
         </div>
 
-        <div>
-          <Button variant="secondary" onClick={openPaymentModal}>
-            Registrar Pagamento
-          </Button>
-        </div>
+        {canWrite && (
+          <div>
+            <Button variant="secondary" onClick={openPaymentModal}>
+              Registrar Pagamento
+            </Button>
+          </div>
+        )}
       </section>
 
       <section className="order-stages">
         <div className="products-panel-header">
           <h2>Etapas do Pedido</h2>
 
-          <div className="stage-actions">
-            <Button
-              variant="secondary"
-              onClick={() => regressOrderStage(order.id)}
-              disabled={order.stage === 'venda'}
-            >
-              Voltar etapa
-            </Button>
+          {canWrite && (
+            <div className="stage-actions">
+              <Button
+                variant="secondary"
+                onClick={() => regressOrderStage(order.id)}
+                disabled={order.stage === 'venda'}
+              >
+                Voltar etapa
+              </Button>
 
-            <Button
-              variant="secondary"
-              onClick={() => advanceOrderStage(order.id)}
-              disabled={order.stage === 'producao' || autoAdvancePending}
-            >
-              Avançar etapa
-            </Button>
-          </div>
+              <Button
+                variant="secondary"
+                onClick={() => advanceOrderStage(order.id)}
+                disabled={order.stage === 'producao' || autoAdvancePending}
+              >
+                Avançar etapa
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="stage-list">
@@ -289,7 +300,7 @@ function OrderDetails() {
       <section className="products-panel">
         <div className="products-panel-header">
           <h2>Produtos</h2>
-          <Button onClick={openAddModal}>Adicionar Produto</Button>
+          {canWrite && <Button onClick={openAddModal}>Adicionar Produto</Button>}
         </div>
 
         {products.length === 0 && <p>Nenhum produto adicionado ainda.</p>}

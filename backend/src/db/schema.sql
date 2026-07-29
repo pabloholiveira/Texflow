@@ -123,16 +123,17 @@ CREATE TABLE IF NOT EXISTS operations (
   sequence_position INTEGER
 );
 
--- Etapa 7 do roadmap (CLAUDE.md): login básico, sem papéis por setor ainda.
--- role tem CHECK só com 'admin' por enquanto — dá pra virar
--- ('admin', 'vendedora', 'producao', ...) depois sem migração estrutural,
--- só relaxando o CHECK. password_hash nunca guarda a senha em texto puro —
--- é gerado com bcrypt (ver backend/src/scripts/createUser.js).
+-- Etapa 7 do roadmap (CLAUDE.md): login básico. Os papéis por setor chegaram
+-- depois (migration 0005) — o CHECK aqui já nasce com os quatro, mas um banco
+-- que já existia precisa da 0005 pra trocar a constraint antiga, porque
+-- CREATE TABLE IF NOT EXISTS não altera tabela existente. password_hash nunca
+-- guarda a senha em texto puro — é gerado com bcrypt (ver createUser.js).
 CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin')),
+  role TEXT NOT NULL DEFAULT 'admin'
+    CHECK (role IN ('admin', 'vendedora', 'design', 'producao')),
   -- Item 1.2 do roadmap (CLAUDE.md): DELETE /users/:id nunca apaga a linha
   -- de verdade (soft delete) — só marca is_active = false. Login (POST
   -- /auth/login) passa a rejeitar um usuário inativo com a mesma mensagem
@@ -141,6 +142,17 @@ CREATE TABLE IF NOT EXISTS users (
   -- de sessões — mesma decisão de design já registrada na Etapa 7).
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Etapas que cada usuário de produção pode operar (migration 0005). Aponta
+-- pro mesmo catálogo `operations` que a tela de Configurações gerencia — não
+-- existe lista paralela de etapas. Os dois ON DELETE CASCADE limpam sozinhos
+-- quando uma operação é removida ou um usuário apagado. Lista vazia nega
+-- tudo; a regra vive em canOperateStep (backend/src/db/usersQueries.js).
+CREATE TABLE IF NOT EXISTS user_operations (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  operation_id BIGINT NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, operation_id)
 );
 
 CREATE TABLE IF NOT EXISTS product_files (

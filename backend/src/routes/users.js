@@ -1,9 +1,21 @@
 import { Router } from 'express'
 import bcrypt from 'bcrypt'
 import { pool } from '../db/pool.js'
+import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { getUserOperations, setUserOperations } from '../db/usersQueries.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { ROLES, ADMIN_ONLY } from '../auth/permissions.js'
 
 const router = Router()
+
+function isAdmin(req) {
+  return req.user.role === 'admin'
+}
+
+function isSelf(req) {
+  return String(req.user.id) === String(req.params.id)
+}
 
 // Nunca inclui password_hash na resposta.
 function mapUser(row) {
@@ -18,32 +30,85 @@ function mapUser(row) {
 
 router.get(
   '/',
+  requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
     const result = await pool.query('SELECT * FROM users ORDER BY username')
     res.json(result.rows.map(mapUser))
   })
 )
 
+// Admin vê qualquer um; qualquer pessoa vê a si mesma (é o que a seção
+// "Minha Senha" precisa saber, sem exigir ser admin pra isso).
 router.get(
   '/:id',
   asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && !isSelf(req)) {
+      return res.status(403).json({ error: 'Seu perfil não tem permissão para esta ação' })
+    }
+
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.params.id])
     if (result.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' })
     res.json(mapUser(result.rows[0]))
   })
 )
 
-// Só edita `username` por enquanto — troca de senha é a Etapa 1.3 (exige
-// senha atual, então merece sua própria rota em vez de entrar no columnMap
-// genérico daqui).
+// Etapas que este usuário de produção pode operar (migration 0005). Mesma
+// regra de visibilidade do GET acima: admin vê de todos, cada um vê as suas.
+router.get(
+  '/:id/operations',
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && !isSelf(req)) {
+      return res.status(403).json({ error: 'Seu perfil não tem permissão para esta ação' })
+    }
+    res.json(await getUserOperations(req.params.id))
+  })
+)
+
+// Substitui a lista inteira de uma vez (a tela manda o conjunto final de
+// checkboxes marcados) — ver setUserOperations. Só admin atribui.
+router.put(
+  '/:id/operations',
+  requireRole(...ADMIN_ONLY),
+  asyncHandler(async (req, res) => {
+    const { operationIds } = req.body
+
+    if (!Array.isArray(operationIds)) {
+      return res.status(400).json({ error: 'operationIds deve ser uma lista de ids' })
+    }
+
+    const target = await pool.query('SELECT id FROM users WHERE id = $1', [req.params.id])
+    if (target.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' })
+    }
+
+    await withTransaction((client) => setUserOperations(client, req.params.id, operationIds))
+    res.json(await getUserOperations(req.params.id))
+  })
+)
+
+// Edita `username` e `role` — troca de senha continua fora daqui (exige senha
+// atual, então tem rota própria logo abaixo).
 router.patch(
   '/:id',
+  requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
-    const columnMap = { username: 'username' }
+    const columnMap = { username: 'username', role: 'role' }
     const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'Nenhum campo válido para atualizar' })
+    }
+
+    if ('role' in req.body) {
+      if (!ROLES.includes(req.body.role)) {
+        return res.status(400).json({ error: `role deve ser um de: ${ROLES.join(', ')}` })
+      }
+      // Mesma proteção anti-tranca-fora do DELETE abaixo: um admin rebaixando
+      // a si mesmo perderia na hora o acesso a esta própria tela, sem ninguém
+      // pra desfazer. Rebaixar OUTRO admin segue permitido.
+      if (isSelf(req)) {
+        return res.status(400).json({ error: 'Não é possível trocar o próprio papel' })
+      }
     }
 
     const setClause = updates.map(([key], index) => `${columnMap[key]} = $${index + 1}`).join(', ')
@@ -72,15 +137,18 @@ router.patch(
 // - Trocando a própria senha (id === req.user.id): exige currentPassword e
 //   confere com bcrypt.compare antes de aceitar a nova.
 // - Redefinindo a senha de outro usuário: não exige currentPassword — é uma
-//   redefinição direta (o sistema é uso interno, sem papéis por setor ainda
-//   — hoje todo autenticado é 'admin' — então não há verificação extra de
-//   permissão além de "estar logado", mesma limitação já registrada no
-//   restante do CLAUDE.md sobre a role única).
+//   redefinição direta, mas agora só o admin pode fazer isso (antes dos
+//   papéis por setor, bastava estar logado, porque todo autenticado era
+//   'admin').
 router.patch(
   '/:id/password',
   asyncHandler(async (req, res) => {
     const targetId = req.params.id
     const { currentPassword, newPassword } = req.body
+
+    if (!isAdmin(req) && !isSelf(req)) {
+      return res.status(403).json({ error: 'Seu perfil não tem permissão para esta ação' })
+    }
 
     if (!newPassword || newPassword.length < 6) {
       return res
@@ -92,8 +160,7 @@ router.patch(
     const target = rows[0]
     if (!target) return res.status(404).json({ error: 'Usuário não encontrado' })
 
-    const isSelf = String(req.user.id) === String(targetId)
-    if (isSelf) {
+    if (isSelf(req)) {
       if (!currentPassword) {
         return res
           .status(400)
@@ -124,10 +191,11 @@ router.patch(
 // 2. Não pode desativar o último usuário ativo restante.
 router.delete(
   '/:id',
+  requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
     const targetId = req.params.id
 
-    if (String(req.user.id) === String(targetId)) {
+    if (isSelf(req)) {
       return res.status(400).json({ error: 'Não é possível desativar o próprio usuário' })
     }
 

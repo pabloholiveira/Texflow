@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/authContext'
+import { ROLE_LABELS } from '../../data/permissions'
 
 // Ícones outline (stroke, não preenchidos) — SVG inline, nenhuma lib externa.
 const NAV_ITEMS = [
@@ -28,6 +29,10 @@ const NAV_ITEMS = [
   {
     to: '/clientes',
     label: 'Clientes',
+    // `action` casa com a chave em src/data/permissions.js; sem action, o
+    // item aparece para todo mundo. Mesma chave usada pra proteger a rota em
+    // App.jsx — esconder do menu sem proteger a rota seria só maquiagem.
+    action: 'clients.manage',
     // Silhueta única de pessoa (não o par de usuários).
     icon: (
       <>
@@ -61,6 +66,7 @@ const NAV_ITEMS = [
   {
     to: '/relatorios',
     label: 'Relatórios',
+    action: 'reports.view',
     icon: (
       <>
         <path d="M4 20V10" />
@@ -83,8 +89,10 @@ const NAV_ITEMS = [
 ]
 
 function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, logout, can } = useAuth()
   const navigate = useNavigate()
+
+  const visibleItems = NAV_ITEMS.filter((item) => !item.action || can(item.action))
 
   function handleLogout() {
     logout()
@@ -118,7 +126,7 @@ function Sidebar() {
       </div>
 
       <nav>
-        {NAV_ITEMS.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink to={item.to} key={item.to}>
             <svg
               viewBox="0 0 24 24"
@@ -137,7 +145,14 @@ function Sidebar() {
       </nav>
 
       <div className="sidebar-user">
-        {user && <span>{user.username}</span>}
+        {user && (
+          <span>
+            {user.username}
+            {/* Papel visível: sem isso, "sumiu o menu Clientes" vira mistério
+                para quem está usando o sistema. */}
+            <small className="sidebar-user-role">{ROLE_LABELS[user.role] || user.role}</small>
+          </span>
+        )}
         <button onClick={handleLogout}>Sair</button>
       </div>
     </aside>

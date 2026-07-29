@@ -110,6 +110,10 @@ export const reportsApi = {
 
 export const usersApi = {
   list: () => request('/users'),
+  update: (id, fields) => request(`/users/${id}`, { method: 'PATCH', body: fields }),
+  operations: (id) => request(`/users/${id}/operations`),
+  setOperations: (id, operationIds) =>
+    request(`/users/${id}/operations`, { method: 'PUT', body: { operationIds } }),
   changeOwnPassword: (id, currentPassword, newPassword) =>
     request(`/users/${id}/password`, { method: 'PATCH', body: { currentPassword, newPassword } }),
   resetPassword: (id, newPassword) =>

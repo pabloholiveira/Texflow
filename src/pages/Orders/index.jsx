@@ -2,12 +2,14 @@ import Layout from '../../components/layout/Layout'
 import { Link } from 'react-router-dom'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
+import { useAuth } from '../../context/authContext'
 import { getStageLabel } from '../../data/orderStages'
 import { getClientDisplayName } from '../../data/clients'
 
 function Orders() {
   const { orders } = useOrders()
   const { clients } = useClients()
+  const { can } = useAuth()
   const finalizedOrders = orders.filter((order) => !order.isDraft)
 
   return (
@@ -18,9 +20,11 @@ function Orders() {
           <p>Acompanhe os pedidos e seus produtos</p>
         </div>
 
-        <Link to="/pedidos/novo">
-         <button>Novo Pedido</button>
-        </Link>
+        {can('orders.write') && (
+          <Link to="/pedidos/novo">
+            <button>Novo Pedido</button>
+          </Link>
+        )}
       </div>
 
       <section className="orders-list">

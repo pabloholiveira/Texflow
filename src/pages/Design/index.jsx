@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
 import { useOrders } from '../../context/ordersContext'
+import { useAuth } from '../../context/authContext'
 import { DESIGN_STATUSES } from '../../data/designStatuses'
 
 // Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
@@ -17,6 +18,13 @@ import { DESIGN_STATUSES } from '../../data/designStatuses'
 // fonte de verdade sem necessidade.
 function Design() {
   const { orders, setProductDesignStatus } = useOrders()
+  // Quem não é do design (ou admin) enxerga a fila mas não move card — a
+  // matriz é "leitura ampla, escrita por setor". Gate num lugar só, em volta
+  // do bloco inteiro de ações, em vez de repetir a condição nos quatro
+  // botões: menos chance de esquecer um (foi assim que os botões sumiram
+  // desta tela em 2026-07-25).
+  const { can } = useAuth()
+  const canMove = can('design.move')
 
   const queue = orders
     .filter((order) => !order.isDraft)
@@ -74,69 +82,95 @@ function Design() {
                     {item.product.quantity ? ` • ${item.product.quantity} peças` : ''}
                   </p>
 
-                  <div className="kanban-card-actions">
-                    {column.value === 'pendente' && (
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          setProductDesignStatus(item.orderId, item.product.id, 'em_design')
-                        }
-                      >
-                        Iniciar
-                      </Button>
-                    )}
-
-                    {column.value === 'em_design' && (
-                      <>
+                  {canMove && (
+                    <div className="kanban-card-actions">
+                      {column.value === 'pendente' && (
                         <Button
                           variant="secondary"
                           onClick={() =>
-                            setProductDesignStatus(item.orderId, item.product.id, 'pendente')
+                            setProductDesignStatus(
+                              item.orderId,
+                              item.product.id,
+                              'em_design'
+                            )
                           }
                         >
-                          Voltar
+                          Iniciar
                         </Button>
-                        <Button
-                          onClick={() =>
-                            setProductDesignStatus(item.orderId, item.product.id, 'aprovacao')
-                          }
-                        >
-                          Enviar pra Aprovação
-                        </Button>
-                      </>
-                    )}
+                      )}
 
-                    {column.value === 'aprovacao' && (
-                      <>
+                      {column.value === 'em_design' && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              setProductDesignStatus(
+                                item.orderId,
+                                item.product.id,
+                                'pendente'
+                              )
+                            }
+                          >
+                            Voltar
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              setProductDesignStatus(
+                                item.orderId,
+                                item.product.id,
+                                'aprovacao'
+                              )
+                            }
+                          >
+                            Enviar pra Aprovação
+                          </Button>
+                        </>
+                      )}
+
+                      {column.value === 'aprovacao' && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              setProductDesignStatus(
+                                item.orderId,
+                                item.product.id,
+                                'em_design'
+                              )
+                            }
+                          >
+                            Voltar
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              setProductDesignStatus(
+                                item.orderId,
+                                item.product.id,
+                                'concluido'
+                              )
+                            }
+                          >
+                            Concluir
+                          </Button>
+                        </>
+                      )}
+
+                      {column.value === 'concluido' && (
                         <Button
                           variant="secondary"
                           onClick={() =>
-                            setProductDesignStatus(item.orderId, item.product.id, 'em_design')
+                            setProductDesignStatus(
+                              item.orderId,
+                              item.product.id,
+                              'em_design'
+                            )
                           }
                         >
-                          Voltar
+                          Reabrir
                         </Button>
-                        <Button
-                          onClick={() =>
-                            setProductDesignStatus(item.orderId, item.product.id, 'concluido')
-                          }
-                        >
-                          Concluir
-                        </Button>
-                      </>
-                    )}
-
-                    {column.value === 'concluido' && (
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          setProductDesignStatus(item.orderId, item.product.id, 'em_design')
-                        }
-                      >
-                        Reabrir
-                      </Button>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

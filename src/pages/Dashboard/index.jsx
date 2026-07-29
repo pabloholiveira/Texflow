@@ -3,6 +3,7 @@ import Layout from '../../components/layout/Layout'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
 import { useOperations } from '../../context/operationsContext'
+import { useAuth } from '../../context/authContext'
 import { getClientDisplayName } from '../../data/clients'
 
 // Deadline vem do backend como string "YYYY-MM-DD" pura (ver pool.js), então
@@ -32,6 +33,7 @@ function Dashboard() {
   const { orders } = useOrders()
   const { clients } = useClients()
   const { operations } = useOperations()
+  const { can } = useAuth()
 
   const activeOrders = orders.filter((order) => !order.isDraft)
   const today = todayString()
@@ -70,9 +72,11 @@ function Dashboard() {
           <p>Visão geral da produção da confecção</p>
         </div>
 
-        <Link to="/pedidos/novo">
-          <button>Novo pedido</button>
-        </Link>
+        {can('orders.write') && (
+          <Link to="/pedidos/novo">
+            <button>Novo pedido</button>
+          </Link>
+        )}
       </div>
 
       {(overdueOrders.length > 0 || dueTomorrowCount > 0) && (

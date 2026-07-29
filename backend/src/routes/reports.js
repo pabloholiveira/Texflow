@@ -1,11 +1,14 @@
 import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { SALES_ROLES } from '../auth/permissions.js'
 
 const router = Router()
 
 router.get(
   '/avg-time-per-step',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     // Como o status só anda em sequência estrita (pending -> in_progress ->
     // done, podendo voltar), o evento imediatamente anterior a um 'done' é
@@ -47,6 +50,7 @@ router.get(
 
 router.get(
   '/bottlenecks',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     // Só pedidos que já saíram de Venda — desde a integração Design ↔
     // Produção (item 3.1), produção roda em paralelo com design a partir

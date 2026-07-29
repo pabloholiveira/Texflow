@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { requireRole } from '../middleware/requireRole.js'
+import { SALES_ROLES } from '../auth/permissions.js'
 
 const router = Router()
 
@@ -35,6 +37,7 @@ router.get(
 
 router.patch(
   '/:id',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const columnMap = {
       personName: 'person_name',
@@ -76,6 +79,7 @@ router.patch(
 
 router.post(
   '/',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const { personName, companyName = null, document, phone, email = null } = req.body
 
@@ -107,6 +111,7 @@ router.post(
 // só se não achar nenhum com esse documento.
 router.post(
   '/find-or-create',
+  requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const { personName, companyName = null, document, phone, email = null } = req.body
 
