@@ -378,7 +378,11 @@ Os usuários da Kavi não têm e-mail cadastrado, então não existe reset por l
 
 ## Estado do roadmap: ✅ os 6 itens fechados (2026-07-30)
 
-**Nada foi deployado.** Cinco migrations (`0006` a `0010`) rodaram **só no banco local**; produção (Railway/Vercel) segue exatamente como estava antes de 2026-07-29. Quando for subir, vale a ordem de sempre — migrations → `railway up` → `git push` — e agora com atenção redobrada, porque é um lote grande: grade de tamanhos, fases de operação com reposicionamento, backfill de duas etapas em todos os produtos, dois estágios novos de pedido e a fila de reset de senha.
+**Deployado em 2026-07-30** — migrations `0006` a `0010` no Postgres do Railway, depois `railway up backend --path-as-root --service backend`. O backfill inseriu 12 linhas (6 produtos reais × 2 etapas); catálogo com 5 operações de produção e 3 de conferência. Verificado na produção real com usuário descartável (apagado depois — só as 9 contas da Kavi ficaram): Produção com as 5 abas e cards, Conferência com as 3 abas na ordem e os produtos do backfill em Revisão/Embalagem (Lavagem vazia, correto — ela é opcional), tracker com 6 chips, grade de 19 tamanhos somando a quantidade, e o "Esqueci minha senha" no login. Zero erros de console.
+
+**⚠️ Erro de processo cometido aqui, que vale mais que o deploy em si: a Vercel é git-connected, então CADA `git push` durante o desenvolvimento já subiu o frontend novo para produção.** Enquanto isso o backend do Railway continuou antigo por horas — e eu segui dizendo "produção intocada", o que valia só para banco e backend. O sintoma concreto foi grave e passou despercebido: a tela de **Produção filtra as abas por `operation.phase`**, campo que o backend antigo não devolvia, então `phase` vinha `undefined`, o filtro não casava com nada e **o kanban ficou vazio para a equipe de produção**. Só apareceu quando fui preparar o deploy e conferi o bundle no ar.
+
+**Regra a seguir daqui em diante**: em mudança que toque frontend E backend, ou o backend sobe primeiro (ele é retrocompatível — o front antigo simplesmente ignora campo novo), ou os commits ficam locais até o backend ir junto. `git push` **não é** uma ação neutra neste projeto: é um deploy de frontend. A assimetria já estava documentada no item 2.1 dos fechamentos rápidos ("worth double-checking after any backend-only deploy whether the frontend commits also need a push") — o que faltou foi aplicar a leitura inversa, que é a perigosa.
 
 ## Possível expansão futura (não é prioridade agora)
 
