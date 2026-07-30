@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
+import ProductDetailPanel from '../../components/ui/ProductDetailPanel'
+import ProductFileUpload from '../../components/ui/ProductFileUpload'
 import { useOrders } from '../../context/ordersContext'
 import { useAuth } from '../../context/authContext'
+import { useProductFiles } from '../../hooks/useProductFiles'
 import { DESIGN_STATUSES } from '../../data/designStatuses'
 
 // Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
@@ -26,6 +31,18 @@ function Design() {
   const { can } = useAuth()
   const canMove = can('design.move')
 
+  // Item 5 (2026-07-30): clicar no produto abre a visão detalhada, com as
+  // referências que a vendedora recebeu do cliente e o upload do layout
+  // aprovado — que as etapas de produção passam a consultar (item 4).
+  const [detailTarget, setDetailTarget] = useState(null)
+  const {
+    fileDraft,
+    resetFileDraft,
+    handleFileDraftChange,
+    handleFileSelect,
+    uploadFile,
+  } = useProductFiles()
+
   const queue = orders
     .filter((order) => !order.isDraft)
     .flatMap((order) =>
@@ -37,6 +54,24 @@ function Design() {
           orderNumber: order.orderNumber,
         }))
     )
+
+  function openDetail(item) {
+    setDetailTarget({ orderId: item.orderId, productId: item.product.id })
+    // Nesta tela o que se sobe é o layout aprovado, não referência — daí o
+    // padrão diferente do modal de Arquivos do pedido.
+    resetFileDraft('layout_aprovado')
+  }
+
+  // Relê da fila em vez de guardar o produto no estado: assim o painel
+  // acompanha sozinho o upload que acabou de acontecer (o OrdersProvider
+  // troca o produto no cache), sem refetch nem estado duplicado.
+  const detail = detailTarget
+    ? queue.find(
+        (item) =>
+          item.orderId === detailTarget.orderId &&
+          item.product.id === detailTarget.productId
+      )
+    : null
 
   return (
     <Layout>
@@ -66,10 +101,14 @@ function Design() {
                   {item.product.needsDesignRework && (
                     <span className="rework-badge">Retrabalho de design</span>
                   )}
-                  <strong>
+
+                  <button
+                    className="kanban-card-title"
+                    onClick={() => openDetail(item)}
+                  >
                     {item.product.type}
                     {item.product.model ? ` — ${item.product.model}` : ''}
-                  </strong>
+                  </button>
 
                   <p>
                     <Link
@@ -82,17 +121,20 @@ function Design() {
                     {item.product.quantity ? ` • ${item.product.quantity} peças` : ''}
                   </p>
 
+                  {item.product.files?.length > 0 && (
+                    <span className="design-card-files">
+                      {item.product.files.length} arquivo
+                      {item.product.files.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+
                   {canMove && (
                     <div className="kanban-card-actions">
                       {column.value === 'pendente' && (
                         <Button
                           variant="secondary"
                           onClick={() =>
-                            setProductDesignStatus(
-                              item.orderId,
-                              item.product.id,
-                              'em_design'
-                            )
+                            setProductDesignStatus(item.orderId, item.product.id, 'em_design')
                           }
                         >
                           Iniciar
@@ -104,22 +146,14 @@ function Design() {
                           <Button
                             variant="secondary"
                             onClick={() =>
-                              setProductDesignStatus(
-                                item.orderId,
-                                item.product.id,
-                                'pendente'
-                              )
+                              setProductDesignStatus(item.orderId, item.product.id, 'pendente')
                             }
                           >
                             Voltar
                           </Button>
                           <Button
                             onClick={() =>
-                              setProductDesignStatus(
-                                item.orderId,
-                                item.product.id,
-                                'aprovacao'
-                              )
+                              setProductDesignStatus(item.orderId, item.product.id, 'aprovacao')
                             }
                           >
                             Enviar pra Aprovação
@@ -132,22 +166,14 @@ function Design() {
                           <Button
                             variant="secondary"
                             onClick={() =>
-                              setProductDesignStatus(
-                                item.orderId,
-                                item.product.id,
-                                'em_design'
-                              )
+                              setProductDesignStatus(item.orderId, item.product.id, 'em_design')
                             }
                           >
                             Voltar
                           </Button>
                           <Button
                             onClick={() =>
-                              setProductDesignStatus(
-                                item.orderId,
-                                item.product.id,
-                                'concluido'
-                              )
+                              setProductDesignStatus(item.orderId, item.product.id, 'concluido')
                             }
                           >
                             Concluir
@@ -159,11 +185,7 @@ function Design() {
                         <Button
                           variant="secondary"
                           onClick={() =>
-                            setProductDesignStatus(
-                              item.orderId,
-                              item.product.id,
-                              'em_design'
-                            )
+                            setProductDesignStatus(item.orderId, item.product.id, 'em_design')
                           }
                         >
                           Reabrir
@@ -177,6 +199,49 @@ function Design() {
           )
         })}
       </div>
+
+      <Modal
+        isOpen={!!detail}
+        onClose={() => setDetailTarget(null)}
+        title={
+          detail
+            ? `${detail.product.type} — ${detail.orderNumber}`
+            : 'Produto'
+        }
+      >
+        {detail && (
+          <>
+            <ProductDetailPanel product={detail.product} />
+
+            {canMove && (
+              <div className="design-upload">
+                <h4>Enviar arquivo</h4>
+                <p>
+                  Suba aqui o PDF do layout aprovado — ele fica visível para
+                  corte, costura, bordado e estampa.
+                </p>
+
+                <ProductFileUpload
+                  fileDraft={fileDraft}
+                  onDraftChange={handleFileDraftChange}
+                  onFileSelect={handleFileSelect}
+                />
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <Button variant="secondary" onClick={() => setDetailTarget(null)}>
+                Fechar
+              </Button>
+              {canMove && (
+                <Button onClick={() => uploadFile(detail.orderId, detail.product.id)}>
+                  Enviar Arquivo
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+      </Modal>
     </Layout>
   )
 }

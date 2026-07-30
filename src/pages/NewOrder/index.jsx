@@ -10,13 +10,13 @@ import Textarea from '../../components/ui/Textarea'
 import ClientAutocomplete from '../../components/ui/ClientAutocomplete'
 import ProductFields from '../../components/ui/ProductFields'
 import FileInput from '../../components/ui/FileInput'
-import Select from '../../components/ui/Select'
+import ProductFileList from '../../components/ui/ProductFileList'
+import ProductFileUpload from '../../components/ui/ProductFileUpload'
 import PaymentFields from '../../components/ui/PaymentFields'
 import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
 import { formatCurrency } from '../../utils/currency'
-import { FILE_CATEGORIES, getFileCategoryLabel } from '../../data/fileCategories'
 
 const emptyClient = {
   personName: '',
@@ -385,42 +385,13 @@ function NewOrder() {
         onClose={closeFilesModal}
         title={filesProduct ? `Arquivos — ${filesProduct.type}` : 'Arquivos'}
       >
-        <div className="comments-list">
-          {(!filesProduct?.files || filesProduct.files.length === 0) && (
-            <p>Nenhum arquivo ainda.</p>
-          )}
+        <ProductFileList files={filesProduct?.files || []} />
 
-          {filesProduct?.files?.map((file) => (
-            <div className="comment-item" key={file.id}>
-              <div className="comment-item-header">
-                <strong>
-                  <a href={file.fileUrl} target="_blank" rel="noreferrer">
-                    {file.fileName}
-                  </a>
-                </strong>
-                <span>{getFileCategoryLabel(file.category)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Select
-          label="Categoria"
-          name="category"
-          value={fileDraft.category}
-          onChange={handleFileDraftChange}
-          options={FILE_CATEGORIES}
+        <ProductFileUpload
+          fileDraft={fileDraft}
+          onDraftChange={handleFileDraftChange}
+          onFileSelect={handleFileSelect}
         />
-
-        <Input
-          label="Enviado por"
-          placeholder="Seu nome"
-          name="uploadedBy"
-          value={fileDraft.uploadedBy}
-          onChange={handleFileDraftChange}
-        />
-
-        <FileInput label="Arquivo" onChange={handleFileSelect} />
 
         <div className="modal-actions">
           <Button variant="secondary" onClick={closeFilesModal}>

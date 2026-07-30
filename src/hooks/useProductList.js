@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useOrders } from '../context/ordersContext'
 import { useAuth } from '../context/authContext'
 import { sizesToList, sizesToMap, sumSizes } from '../data/sizes'
+import { useProductFiles } from './useProductFiles'
 
 const emptyProduct = {
   type: '',
@@ -60,8 +61,17 @@ export function useProductList(orderId) {
 
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false)
   const [filesProductId, setFilesProductId] = useState(null)
-  const [fileDraft, setFileDraft] = useState({ category: 'referencia', uploadedBy: '' })
-  const [selectedFile, setSelectedFile] = useState(null)
+  // O formulário de upload em si mora num hook próprio (item 5): a tela de
+  // Design precisa da mesma lógica, mas trabalha com produtos de vários
+  // pedidos e não pode usar o useProductList, que é de um pedido só.
+  const {
+    fileDraft,
+    selectedFile,
+    resetFileDraft,
+    handleFileDraftChange,
+    handleFileSelect,
+    uploadFile: uploadProductFile,
+  } = useProductFiles()
 
   // Forma funcional (current => ...), não `{ ...product, ... }` direto: o
   // checkbox de vetorização (ProductFields) chama isso duas vezes seguidas
@@ -245,8 +255,7 @@ export function useProductList(orderId) {
 
   function openFilesModal(target) {
     setFilesProductId(target.id)
-    setFileDraft({ category: 'referencia', uploadedBy: '' })
-    setSelectedFile(null)
+    resetFileDraft()
     setIsFilesModalOpen(true)
   }
 
@@ -255,28 +264,10 @@ export function useProductList(orderId) {
     setFilesProductId(null)
   }
 
-  function handleFileDraftChange(event) {
-    const { name, value } = event.target
-    setFileDraft({ ...fileDraft, [name]: value })
-  }
-
-  function handleFileSelect(event) {
-    setSelectedFile(event.target.files[0] || null)
-  }
-
+  // Esta tela tem um pedido só, então continua expondo uploadFile() sem
+  // argumentos — quem recebe orderId/productId é o hook compartilhado.
   async function uploadFile() {
-    if (!selectedFile) {
-      alert('Escolha um arquivo.')
-      return
-    }
-
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    formData.append('category', fileDraft.category)
-    if (fileDraft.uploadedBy) formData.append('uploadedBy', fileDraft.uploadedBy)
-
-    const created = await addProductFile(orderId, filesProductId, formData)
-    if (created) setSelectedFile(null)
+    await uploadProductFile(orderId, filesProductId)
   }
 
   return {

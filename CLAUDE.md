@@ -261,7 +261,7 @@ Detalhes de implementação que não se deduzem do código:
 
 **Ainda não feito**: nenhuma ação de estágio é atribuída a um setor específico além de `SALES_ROLES` (ver "Important nuance" acima); não há "Reativar usuário" (já era assim antes); e o papel não influencia em nada o que aparece no Dashboard ou nos Relatórios além de esconder a tela inteira. **As contas reais da Kavi foram criadas em 2026-07-29**, logo após o deploy, via `createUser.js` contra o `$DATABASE_PUBLIC_URL` (senha temporária única, para cada pessoa trocar em "Minha Senha"; usernames em minúsculas, e o login diferencia maiúsculas): `pablo` e `elaine` (a dona da loja) como `admin`; `ketylin`, `simone` e `caixa` como `vendedora`; `nilva` (Corte), `cleusa` (Costura), `dulce` (Bordado) e `viana` (Silk) como `producao`, cada uma com sua etapa atribuída em `user_operations`. **Ninguém é `design` ainda** — a Kavi não tem essa função separada hoje. **`caixa` é uma conta compartilhada, não uma pessoa**: como o autor do comentário e o histórico gravam o username, tudo que sair dali aparece como "caixa", sem identificar quem foi — limitação conhecida e aceita. **"Estampa" continua não existindo no catálogo** (a Viana ficou só com `Silk`): quando alguém assumir DTF, é atribuição pela tela, não mudança de código.
 
-## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (item 3 done; próximo: item 5)
+## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 3 e 5 done; próximo: item 4)
 
 Seis pontos levantados pelo Pablo usando o sistema, todos ligados ao fluxo de produção e à experiência de quem opera cada etapa. Mesma regra dos outros roadmaps: **um item por vez, testado antes de passar pro próximo**.
 
@@ -296,13 +296,22 @@ Arquivos tocados: `backend/src/db/migrations/0006_product_sizes.sql` (novo), `ba
 
 **Migration `0006` aplicada só no banco LOCAL. Produção (Railway) ainda não foi tocada** — nem migration, nem `railway up`, nem push do backend. Deploy pendente, e quando for, vale a ordem de sempre: migration → backend → frontend.
 
-### Item 5 — Design clicável + layout aprovado (não começado)
+### Item 5 — Design clicável + layout aprovado — ✅ done, 2026-07-30
 
-Clicar no produto na tela `/design` abre uma visão com informações do produto, os arquivos de referência (logo etc.) e a área de upload do PDF do layout aprovado. **Risco já identificado**: toda a lógica de upload vive hoje no `useProductList`, que é *por pedido*, e a tela de Design é *entre pedidos* — vai precisar extrair a parte de arquivos para algo que funcione com um `productId` solto. É refatoração, não invenção, mas é onde o item pode crescer. O componente de visão detalhada nasce aqui e é **reusado no item 4**, em vez de duas telas parecidas mantidas em paralelo.
+Clicar no produto na fila de `/design` abre um modal com a visão completa da peça e o upload do layout aprovado. **Nada de novo no banco** — `product_files` já tinha as duas categorias desde 2026-07-06; o item era visibilidade.
 
-### Item 4 — Informações por etapa na Produção (não começado)
+**Três peças reusáveis nasceram aqui, e o item 4 consome as mesmas** (é o motivo de o 5 vir antes do 4):
+- **`src/hooks/useProductFiles.js`** — o estado do formulário de upload, extraído do `useProductList`. **O motivo da extração é concreto**: `useProductList(orderId)` é montado com UM pedido, e a fila de design mistura produtos de vários pedidos, então não há um `orderId` só pra passar. Por isso `uploadFile(orderId, productId)` recebe os dois por argumento. O `useProductList` continua expondo `uploadFile()` sem argumentos (ele tem um pedido só) delegando pra cá — **nenhuma tela que já usava precisou mudar**.
+- **`src/components/ui/ProductDetailPanel.jsx`** — tipo, modelo, cor, tecido, quantidade, **grade de tamanhos** (item 3 alimentando este), vetorização, observações e os arquivos. Genérico de propósito: não sabe nada de design nem de produção. Não repete o número do pedido, que os dois modais já trazem no título.
+- **`ProductFileList` + `ProductFileUpload`** — a lista (agrupada pelas duas categorias, porque quem está na produção procura "o layout aprovado", não "o terceiro arquivo") e os três campos do upload. **Isso matou uma duplicação real**: o bloco de arquivos era copiado verbatim entre `OrderDetails` e `NewOrder`; entrar num terceiro lugar (Design) foi o gatilho pra extrair em vez de triplicar.
 
-Cada etapa precisa enxergar cor, tecido, quantidade, tamanhos, modelo, observações e o layout aprovado. **Decisão: uma visão única com tudo, não uma variação por etapa** — olhando a lista do Pablo, Corte, Bordado/Silk/DTF e Costura pedem praticamente o mesmo conjunto; uma visão só é menos código e ninguém fica sem informação por um palpite errado de quem precisa dela.
+Detalhes de comportamento: na tela de Design a categoria do upload **já vem em "Layout aprovado"** (é o que se sobe ali), enquanto no modal de Arquivos do pedido continua em "Referência" — daí `resetFileDraft(category)` receber a categoria como parâmetro. O painel **relê o produto da fila** em vez de guardá-lo em estado, então o arquivo recém-enviado aparece sozinho sem fechar o modal e sem refetch. O card ganhou um contador de arquivos. Quem não tem `design.move` (produção, vendedora) **abre o detalhe e enxerga o layout aprovado — que é justamente o que precisa — mas não vê a área de upload**.
+
+**Verificado: 36 checks de navegador**, com usuários descartáveis de três papéis. Cobriu o painel (incluindo a grade de tamanhos vinda do item 3), o upload real ao Cloudinary aparecendo no painel sem fechar o modal, o contador no card, o bloqueio do upload para quem não é do design, e — seguindo a lição já registrada duas vezes aqui — **o que a refatoração deslocou**: o modal de Arquivos do `OrderDetails` (lista + upload + as duas categorias agrupadas), o do `NewOrder`, o anexo de referência dentro do wizard de produto, e o kanban de design movendo cards nas duas direções depois do modal existir.
+
+### Item 4 — Informações por etapa na Produção (próximo)
+
+Cada etapa precisa enxergar cor, tecido, quantidade, tamanhos, modelo, observações e o layout aprovado. **O painel já existe** (`ProductDetailPanel`, item 5) — o trabalho é plugá-lo no modal de detalhe que a Produção já tem e enriquecer o card do kanban. **Decisão: uma visão única com tudo, não uma variação por etapa** — olhando a lista do Pablo, Corte, Bordado/Silk/DTF e Costura pedem praticamente o mesmo conjunto; uma visão só é menos código e ninguém fica sem informação por um palpite errado de quem precisa dela.
 
 ### Item 2 — Aba Conferência (não começado) — **o mais delicado do conjunto**
 

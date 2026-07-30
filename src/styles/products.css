@@ -181,3 +181,114 @@
 .reference-files-list li button:hover {
   background: #fef2f2;
 }
+
+/* Painel de detalhe do produto (item 5, 2026-07-30) — usado no modal da tela
+   de Design e, a partir do item 4, também no de Produção. */
+.product-detail-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.product-detail-fields span {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.product-detail-fields strong {
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.product-detail-observations {
+  background: var(--color-bg);
+  border-radius: var(--radius-input);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.product-detail-observations span {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.product-detail-observations p {
+  margin: 4px 0 0;
+  color: var(--color-text);
+}
+
+/* Arquivos agrupados por categoria — quem está na produção procura "o layout
+   aprovado", não "o terceiro arquivo". */
+.product-files-group + .product-files-group {
+  margin-top: 16px;
+}
+
+.product-files-group h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.product-files-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-files-group li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-input);
+  padding: 10px 14px;
+}
+
+.product-files-group li a {
+  color: var(--color-primary);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.product-files-group li span {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.product-files-empty {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Contador de arquivos no card da fila de design. */
+.design-card-files {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
+.design-upload {
+  border-top: 1px solid var(--color-border);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.design-upload h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.design-upload p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
