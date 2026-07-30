@@ -26,3 +26,19 @@
 .report-table tbody tr:hover {
   background: var(--color-bg);
 }
+
+/* Tabela não encolhe bem: sem isso, "Gargalos — mais parados" (5 colunas)
+   quebraria cada célula letra a letra no celular. O `min-width` mantém as
+   colunas legíveis e o contêiner rola na horizontal quando não couber —
+   só a tabela rola, o título da seção fica parado. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+/* `nowrap` em vez de um `min-width` chutado: a tabela passa a ter a largura
+   natural do conteúdo e o contêiner rola o que sobrar. Sem isso, o navegador
+   espreme as colunas e quebra "PED-2026-0003" em três linhas pra caber. */
+.table-scroll .report-table th,
+.table-scroll .report-table td {
+  white-space: nowrap;
+}

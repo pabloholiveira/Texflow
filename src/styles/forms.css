@@ -100,6 +100,15 @@
   font-weight: 500;
 }
 
+/* `.form-grid input { width: 100% }` lá em cima também acerta o checkbox —
+   ele esticava pela célula inteira e empurrava o rótulo pra segunda linha.
+   Mesma especificidade (uma classe + um tipo), então basta vir depois no
+   arquivo; `flex-shrink: 0` impede que ele encolha se o texto crescer. */
+.vectorization-checkbox input {
+  width: auto;
+  flex-shrink: 0;
+}
+
 .vectorization-checkbox button {
   background: none;
   border: none;
@@ -208,4 +217,30 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .form-section {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Valor total em cima, botão ocupando a largura toda embaixo — alvo de
+     toque decente em vez de um botão espremido no canto direito. */
+  .finalize-order {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  /* Células menores pra caber 4 tamanhos por linha em vez de 3 — são 19 no
+     total, cada linha a menos conta. */
+  .size-grid {
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 6px;
+  }
 }

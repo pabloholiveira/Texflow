@@ -55,3 +55,31 @@
   display: inline-block;
   text-decoration: none;
 }
+
+/* Abaixo de 900px a sidebar vira barra no topo (ver sidebar.css), então o
+   .app deixa de ser duas colunas lado a lado e empilha. Sem isso o conteúdo
+   fica com ~140px de largura num celular, já que a sidebar tem 248px fixos. */
+@media (max-width: 900px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .content {
+    padding: 20px 16px 32px;
+  }
+
+  .page-header {
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .page-header h1 {
+    font-size: 22px;
+  }
+
+  .no-access {
+    padding: 28px 22px;
+    margin-top: 20px;
+  }
+}

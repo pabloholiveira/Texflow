@@ -57,24 +57,26 @@ function Reports() {
             )}
 
             {avgTimePerStep.length > 0 && (
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>Operação</th>
-                    <th>Tempo médio</th>
-                    <th>Nº de conclusões consideradas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {avgTimePerStep.map((row) => (
-                    <tr key={row.step}>
-                      <td>{row.step}</td>
-                      <td>{formatHours(row.avgHours)}</td>
-                      <td>{row.completions}</td>
+              <div className="table-scroll">
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Operação</th>
+                      <th>Tempo médio</th>
+                      <th>Nº de conclusões consideradas</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {avgTimePerStep.map((row) => (
+                      <tr key={row.step}>
+                        <td>{row.step}</td>
+                        <td>{formatHours(row.avgHours)}</td>
+                        <td>{row.completions}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
 
@@ -84,24 +86,26 @@ function Reports() {
             {bottlenecks.volumeByStep.length === 0 && <p>Nenhum pedido em produção no momento.</p>}
 
             {bottlenecks.volumeByStep.length > 0 && (
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>Operação</th>
-                    <th>Pendentes</th>
-                    <th>Em andamento</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bottlenecks.volumeByStep.map((row) => (
-                    <tr key={row.step}>
-                      <td>{row.step}</td>
-                      <td>{row.pending}</td>
-                      <td>{row.inProgress}</td>
+              <div className="table-scroll">
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Operação</th>
+                      <th>Pendentes</th>
+                      <th>Em andamento</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {bottlenecks.volumeByStep.map((row) => (
+                      <tr key={row.step}>
+                        <td>{row.step}</td>
+                        <td>{row.pending}</td>
+                        <td>{row.inProgress}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
 
@@ -111,28 +115,30 @@ function Reports() {
             {bottlenecks.stuckProducts.length === 0 && <p>Nada parado no momento.</p>}
 
             {bottlenecks.stuckProducts.length > 0 && (
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>Pedido</th>
-                    <th>Produto</th>
-                    <th>Operação</th>
-                    <th>Status</th>
-                    <th>Há quanto tempo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bottlenecks.stuckProducts.map((row, index) => (
-                    <tr key={`${row.orderNumber}-${row.step}-${index}`}>
-                      <td>{row.orderNumber}</td>
-                      <td>{row.productType}</td>
-                      <td>{row.step}</td>
-                      <td>{STATUS_LABELS[row.status] || row.status}</td>
-                      <td>{formatSince(row.since)}</td>
+              <div className="table-scroll">
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Pedido</th>
+                      <th>Produto</th>
+                      <th>Operação</th>
+                      <th>Status</th>
+                      <th>Há quanto tempo</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {bottlenecks.stuckProducts.map((row, index) => (
+                      <tr key={`${row.orderNumber}-${row.step}-${index}`}>
+                        <td>{row.orderNumber}</td>
+                        <td>{row.productType}</td>
+                        <td>{row.step}</td>
+                        <td>{STATUS_LABELS[row.status] || row.status}</td>
+                        <td>{formatSince(row.since)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </>

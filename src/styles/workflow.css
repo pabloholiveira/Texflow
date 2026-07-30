@@ -116,3 +116,23 @@
   font-size: 13px;
   color: var(--color-text-muted);
 }
+
+/* .stage-tracker, .stage-list e .stage-actions já usam flex-wrap desde o
+   polish, então os 6 chips do tracker se viram sozinhos — aqui só o que
+   ainda estoura. */
+@media (max-width: 768px) {
+  .stage-tracker {
+    padding: 18px 20px;
+  }
+
+  /* Input + botão lado a lado: sem wrap o campo "outra operação" fica com
+     largura de duas letras. O min-width impede que ele encolha antes de
+     quebrar a linha. */
+  .operation-custom {
+    flex-wrap: wrap;
+  }
+
+  .operation-custom input {
+    min-width: 160px;
+  }
+}

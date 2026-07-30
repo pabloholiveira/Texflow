@@ -145,3 +145,23 @@
   font-size: 14px;
   margin: 4px 0 0;
 }
+
+@media (max-width: 768px) {
+  .client-card {
+    padding: 18px 20px;
+  }
+
+  .client-card-info {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Os três usam space-between com um botão/valor à direita — no celular o
+     par não cabe lado a lado e o texto da esquerda é que sofre. */
+  .client-card-header,
+  .client-selected,
+  .client-order-history-item > div {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

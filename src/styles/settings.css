@@ -34,3 +34,12 @@
   color: var(--color-primary);
   font-weight: 600;
 }
+
+@media (max-width: 768px) {
+  /* Usada pelas listas de operações, usuários e pedidos de senha — todas
+     com nome à esquerda e um ou dois botões à direita. */
+  .operations-settings-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

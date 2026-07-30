@@ -53,3 +53,23 @@
   gap: 12px;
   margin-top: 24px;
 }
+
+@media (max-width: 640px) {
+  /* `flex-start` porque o modal do wizard de produto é alto: centralizado,
+     ele ficaria colado nas duas bordas e sem folga pra rolar. */
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .modal {
+    padding: 20px;
+    max-height: calc(100vh - 24px);
+  }
+
+  /* Empilha mantendo a ordem do DOM: "Cancelar" em cima, a ação principal
+     embaixo — mais perto do polegar. */
+  .modal-actions {
+    flex-direction: column;
+  }
+}

@@ -19,3 +19,18 @@
 .design-board .rework-badge {
   margin-bottom: 8px;
 }
+
+/* Estas duas precisam existir mesmo com production.css já tendo media
+   queries pro .kanban-board: design.css é importado depois, então a regra
+   base de 4 colunas acima venceria as de lá (mesma especificidade). */
+@media (max-width: 1200px) {
+  .design-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .design-board {
+    grid-template-columns: 1fr;
+  }
+}

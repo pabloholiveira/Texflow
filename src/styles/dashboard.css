@@ -95,3 +95,33 @@
   color: var(--color-text-secondary);
   font-size: 14px;
 }
+
+@media (max-width: 1024px) {
+  .dashboard-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dashboard-card {
+    padding: 18px 20px;
+  }
+
+  /* 32px de número num card estreito rouba espaço do rótulo. */
+  .dashboard-card strong {
+    font-size: 26px;
+  }
+
+  .dashboard-panel {
+    padding: 20px;
+  }
+}

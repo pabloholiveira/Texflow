@@ -46,3 +46,12 @@
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
 }
+
+/* Pontos de quebra do layout responsivo (passada de 2026-07-30). Ficam aqui
+   como documentação, NÃO como custom properties: `@media` não lê var(--...),
+   o valor tem que ser literal em cada arquivo.
+     1024px — tablet: grades de 3+ colunas caem pra 2.
+      900px — a sidebar deixa de ser coluna lateral e vira barra no topo.
+      768px — celular: tudo em coluna única, respiro reduzido.
+   As media queries moram no arquivo da feature que elas ajustam (mesma
+   convenção do resto do styles/), não num responsive.css central. */

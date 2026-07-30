@@ -72,3 +72,32 @@
   margin-bottom: 24px;
   box-shadow: var(--shadow-card);
 }
+
+@media (max-width: 1024px) {
+  .order-info {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* As 4 colunas do card de pedido (número, cliente, prazo, status) viram uma
+   pilha: a menor delas tem 0.6fr, que num celular não caberia nem o rótulo. */
+@media (max-width: 768px) {
+  .order-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 18px 20px;
+  }
+
+  /* Duas colunas, não uma: são 6 campos curtos (prazo, status, produtos e os
+     três valores) — empilhados um por linha o painel fica com o dobro da
+     altura e empurra os produtos pra fora da primeira tela. */
+  .order-info {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .order-stages {
+    padding: 20px;
+  }
+}
