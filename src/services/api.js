@@ -110,6 +110,7 @@ export const operationsApi = {
 export const reportsApi = {
   avgTimePerStep: () => request('/reports/avg-time-per-step'),
   bottlenecks: () => request('/reports/bottlenecks'),
+  leadTime: () => request('/reports/lead-time'),
 }
 
 export const usersApi = {

@@ -121,4 +121,93 @@ router.get(
   })
 )
 
+// Prazo real venda -> entrega. Só existe porque a migration 0009 passou a
+// carimbar orders.picked_up_at ao avançar para 'entregue' (item 1 do roadmap
+// de produção) — antes disso não havia como saber QUANDO o cliente retirou.
+//
+// MARCO INICIAL = orders.created_at, e vale entender por quê:
+//   - `order_finalized` (o clique em "Finalizar Pedido") seria semanticamente
+//     mais preciso, mas o evento só passou a ser gravado no item 3.3 e HOJE
+//     NÃO EXISTE NENHUM no banco — o relatório sairia vazio.
+//   - `created_at` é quando a vendedora abriu "Novo Pedido" (a tela cria o
+//     rascunho na montagem). Distorção conhecida: se ela abrir e só finalizar
+//     dias depois, a contagem começa cedo demais. Na prática o preenchimento
+//     é na mesma sessão, e o desvio é pequeno perto de um ciclo de semanas.
+//   - Misturar os dois (COALESCE do evento com o created_at) foi descartado:
+//     daria uma média com dois significados diferentes dentro dela, pior que
+//     um proxy consistente.
+//
+// Subtração de ::date (não de timestamp) porque a pergunta é "quantos dias",
+// do jeito que uma pessoa conta — não frações de hora.
+router.get(
+  '/lead-time',
+  requireRole(...SALES_ROLES),
+  asyncHandler(async (req, res) => {
+    // Agregado sobre TODOS os entregues; a tabela abaixo traz só os últimos
+    // 20. Duas queries em vez de uma para o resumo continuar correto quando
+    // houver centenas de entregas, sem mandar todas pela rede.
+    const summaryResult = await pool.query(`
+      SELECT
+        COUNT(*) AS delivered_count,
+        AVG(picked_up_at::date - created_at::date) AS avg_lead_days,
+        MIN(picked_up_at::date - created_at::date) AS min_lead_days,
+        MAX(picked_up_at::date - created_at::date) AS max_lead_days,
+        COUNT(deadline) AS with_deadline_count,
+        COUNT(*) FILTER (WHERE deadline IS NOT NULL AND picked_up_at::date <= deadline) AS on_time_count,
+        COUNT(*) FILTER (WHERE deadline IS NOT NULL AND picked_up_at::date > deadline) AS late_count
+      FROM orders
+      WHERE is_draft = false AND picked_up_at IS NOT NULL
+    `)
+
+    const ordersResult = await pool.query(`
+      SELECT
+        id,
+        order_number,
+        client_id,
+        created_at,
+        deadline,
+        picked_up_at,
+        (picked_up_at::date - created_at::date) AS lead_days,
+        -- Positivo = entregue depois do prazo; negativo = adiantado; NULL
+        -- quando o pedido nunca teve prazo definido.
+        CASE WHEN deadline IS NULL THEN NULL
+             ELSE (picked_up_at::date - deadline) END AS days_vs_deadline
+      FROM orders
+      WHERE is_draft = false AND picked_up_at IS NOT NULL
+      ORDER BY picked_up_at DESC
+      LIMIT 20
+    `)
+
+    const s = summaryResult.rows[0]
+
+    res.json({
+      summary: {
+        deliveredCount: Number(s.delivered_count),
+        // AVG devolve NUMERIC (string no node-pg) e é NULL sem nenhuma linha —
+        // mesma armadilha de tipo já documentada em ordersQueries.toNumber.
+        avgLeadDays: s.avg_lead_days === null ? null : Number(s.avg_lead_days),
+        minLeadDays: s.min_lead_days === null ? null : Number(s.min_lead_days),
+        maxLeadDays: s.max_lead_days === null ? null : Number(s.max_lead_days),
+        withDeadlineCount: Number(s.with_deadline_count),
+        onTimeCount: Number(s.on_time_count),
+        lateCount: Number(s.late_count),
+      },
+      orders: ordersResult.rows.map((row) => ({
+        id: row.id,
+        orderNumber: row.order_number,
+        // clientId cru, não o nome montado no SQL: getClientDisplayName
+        // (src/data/clients.js) é o único lugar que decide o que exibir de um
+        // cliente, e replicar aquele COALESCE aqui criaria um segundo dono
+        // da mesma regra.
+        clientId: row.client_id,
+        createdAt: row.created_at,
+        deadline: row.deadline,
+        pickedUpAt: row.picked_up_at,
+        leadDays: Number(row.lead_days),
+        daysVsDeadline: row.days_vs_deadline === null ? null : Number(row.days_vs_deadline),
+      })),
+    })
+  })
+)
+
 export default router
