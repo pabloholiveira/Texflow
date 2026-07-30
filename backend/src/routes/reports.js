@@ -52,17 +52,27 @@ router.get(
   '/bottlenecks',
   requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
-    // Só pedidos que já saíram de Venda — desde a integração Design ↔
-    // Produção (item 3.1), produção roda em paralelo com design a partir
-    // daí, então é desse ponto em diante que gargalo vira sinal real.
-    // Pedidos ainda em Venda ficam de fora (toda etapa 'pending' por
-    // definição, ninguém pode ter começado).
+    // Recorte: pedido que já saiu de Venda e ainda não foi entregue — o
+    // mesmo "operacionalmente ativo" das telas de trabalho (isInWorkflow em
+    // src/data/orderStages.js; processos separados, sem import compartilhado,
+    // igual a ORDER_STAGES).
+    //
+    // Piso em Venda: desde a integração Design ↔ Produção (item 3.1),
+    // produção roda em paralelo com design a partir daí, então é desse ponto
+    // em diante que gargalo vira sinal real. Antes disso toda etapa está
+    // 'pending' por definição — ninguém pode ter começado.
+    //
+    // Teto em Entregue: a trava de entrega só exige as etapas de CONFERÊNCIA
+    // concluídas, não as de fabricação. Sem este filtro, um pedido entregue
+    // com uma Costura que ninguém marcou como concluída apareceria em
+    // "mais parados" para sempre, com o contador crescendo — gargalo é um
+    // problema de hoje, e um pedido entregue não é mais de hoje.
     const volumeResult = await pool.query(`
       SELECT pws.step_name, pws.status, COUNT(*) AS total
       FROM product_workflow_steps pws
       JOIN products p ON p.id = pws.product_id
       JOIN orders o ON o.id = p.order_id
-      WHERE o.is_draft = false AND o.stage != 'venda' AND pws.status != 'done'
+      WHERE o.is_draft = false AND o.stage NOT IN ('venda', 'entregue') AND pws.status != 'done'
       GROUP BY pws.step_name, pws.status
       ORDER BY pws.step_name
     `)
@@ -93,7 +103,7 @@ router.get(
         ORDER BY changed_at DESC
         LIMIT 1
       ) last_event ON true
-      WHERE o.is_draft = false AND o.stage != 'venda' AND pws.status != 'done'
+      WHERE o.is_draft = false AND o.stage NOT IN ('venda', 'entregue') AND pws.status != 'done'
       ORDER BY since ASC
       LIMIT 10
     `)

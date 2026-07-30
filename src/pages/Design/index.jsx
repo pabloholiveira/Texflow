@@ -9,6 +9,7 @@ import { useOrders } from '../../context/ordersContext'
 import { useAuth } from '../../context/authContext'
 import { useProductFiles } from '../../hooks/useProductFiles'
 import { DESIGN_STATUSES } from '../../data/designStatuses'
+import { isActiveOrder } from '../../data/orderStages'
 
 // Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
 // caminhos de entrada: automático (pedido sai de Venda → todos os produtos
@@ -44,7 +45,13 @@ function Design() {
   } = useProductFiles()
 
   const queue = orders
-    .filter((order) => !order.isDraft)
+    // Pedido entregue sai da fila: como TODO produto dele está com
+    // designStatus = 'concluido', ele ficaria parado na coluna "Concluído"
+    // para sempre. Ao contrário de Produção/Conferência, aqui não há piso de
+    // 'venda' — a fila de design é justamente onde o pedido entra ao sair da
+    // Venda, e produto marcado para retrabalho pode aparecer em qualquer
+    // estágio posterior.
+    .filter(isActiveOrder)
     .flatMap((order) =>
       order.products
         .filter((product) => product.designStatus)

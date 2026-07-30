@@ -33,6 +33,13 @@
   margin: 6px 0 0;
 }
 
+/* Aba sem nenhum pedido — mesma cor/tamanho do .kanban-empty, que é o
+   equivalente nas telas de quadro. */
+.orders-empty {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
 .order-card span {
   color: var(--color-text-secondary);
   font-size: 14px;

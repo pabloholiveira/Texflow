@@ -8,6 +8,7 @@ import { useOrders } from '../../context/ordersContext'
 import { useOperations } from '../../context/operationsContext'
 import { useAuth } from '../../context/authContext'
 import { formatSizes } from '../../data/sizes'
+import { isInWorkflow } from '../../data/orderStages'
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pendente' },
@@ -51,12 +52,9 @@ function Production() {
   const allProducts = orders
     // Desde a integração Design ↔ Produção (item 3.1): produção roda em
     // paralelo com design a partir do momento em que o pedido sai de Venda —
-    // não espera mais a aprovação.
-    // Pedido entregue sai do quadro: o trabalho acabou e ele só ocuparia
-    // espaço. Antes da Venda também não aparece (nada a fabricar ainda).
-    .filter(
-      (order) => !order.isDraft && order.stage !== 'venda' && order.stage !== 'entregue'
-    )
+    // não espera mais a aprovação. Entregue também sai (trabalho acabou).
+    // Ver isInWorkflow em data/orderStages.js.
+    .filter(isInWorkflow)
     .flatMap((order) =>
       order.products.map((product) => ({
         ...product,

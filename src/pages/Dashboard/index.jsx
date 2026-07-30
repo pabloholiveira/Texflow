@@ -5,6 +5,7 @@ import { useClients } from '../../context/clientsContext'
 import { useOperations } from '../../context/operationsContext'
 import { useAuth } from '../../context/authContext'
 import { getClientDisplayName } from '../../data/clients'
+import { isActiveOrder } from '../../data/orderStages'
 
 // Deadline vem do backend como string "YYYY-MM-DD" pura (ver pool.js), então
 // dá pra comparar como texto direto, sem passar por Date/fuso horário.
@@ -35,16 +36,16 @@ function Dashboard() {
   const { operations } = useOperations()
   const { can } = useAuth()
 
-  // "Ativo" = ainda em andamento: rascunho não conta (nem foi finalizado) e
-  // entregue também não (acabou) — senão o número só cresce para sempre.
-  const activeOrders = orders.filter(
-    (order) => !order.isDraft && order.stage !== 'entregue'
-  )
+  // Rascunho não conta (nem foi finalizado) e entregue também não (acabou) —
+  // senão o número só cresce para sempre. Ver isActiveOrder em
+  // data/orderStages.js.
+  const activeOrders = orders.filter(isActiveOrder)
   const today = todayString()
 
-  // "Atrasado" aqui só olha o prazo (deadline < hoje) — o modelo ainda não
-  // tem um conceito de "pedido entregue/concluído" que pudesse excluir um
-  // pedido cujos produtos já terminaram mas passou do prazo.
+  // Tudo abaixo deriva de activeOrders, então um pedido entregue já não
+  // aparece como atrasado nem como vencimento próximo, mesmo que tenha
+  // passado do prazo antes de o cliente retirar: depois de entregue é
+  // histórico, não um problema de hoje.
   const overdueOrders = activeOrders.filter(
     (order) => order.deadline && order.deadline < today
   )

@@ -9,6 +9,7 @@ import { useClients } from '../../context/clientsContext'
 import { useSettings } from '../../context/settingsContext'
 import { useAuth } from '../../context/authContext'
 import { buildWhatsAppMessage, buildWhatsAppLink } from '../../utils/whatsapp'
+import { isInWorkflow } from '../../data/orderStages'
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pendente' },
@@ -43,10 +44,9 @@ function Conference() {
     .map((operation) => operation.name)
   const selectedOperation = manuallySelectedOperation ?? operations[0]
 
-  // Mesmo recorte da Produção: pedido real que já saiu da Venda.
-  const visibleOrders = orders.filter(
-    (order) => !order.isDraft && order.stage !== 'venda' && order.stage !== 'entregue'
-  )
+  // Mesmo recorte da Produção: pedido real, já fora da Venda e ainda não
+  // entregue (ver isInWorkflow em data/orderStages.js).
+  const visibleOrders = orders.filter(isInWorkflow)
 
   const allProducts = visibleOrders.flatMap((order) =>
     order.products.map((product) => ({
