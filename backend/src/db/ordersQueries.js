@@ -211,9 +211,19 @@ export async function fetchOrders(whereSql = '', params = []) {
   const products = productsResult.rows
   const productIds = products.map((product) => product.id)
 
+  // ORDER BY não é enfeite: sem ele o Postgres devolve na ordem física das
+  // linhas, que MUDA quando uma etapa é atualizada (um UPDATE reposiciona a
+  // linha) — na prática a etapa que acabou de ser movida pulava para o fim
+  // da lista, embaralhando os chips do ProductCard e a lista do modal de
+  // Produção a cada clique. Ordena pela sequência real de produção; etapa
+  // fora do catálogo ("outra operação") não tem posição e vai para o fim,
+  // com o id desempatando para a ordem ser sempre a mesma.
   const workflowResult = productIds.length
     ? await pool.query(
-        'SELECT * FROM product_workflow_steps WHERE product_id = ANY($1::bigint[])',
+        `SELECT pws.* FROM product_workflow_steps pws
+           LEFT JOIN operations op ON op.name = pws.step_name
+          WHERE pws.product_id = ANY($1::bigint[])
+          ORDER BY op.sequence_position NULLS LAST, pws.id`,
         [productIds]
       )
     : { rows: [] }
@@ -274,8 +284,12 @@ export async function getProductById(db, productId) {
   const productResult = await db.query('SELECT * FROM products WHERE id = $1', [productId])
   if (productResult.rows.length === 0) return null
 
+  // Mesma ordenação do fetchOrders — ver comentário lá.
   const workflowResult = await db.query(
-    'SELECT * FROM product_workflow_steps WHERE product_id = $1',
+    `SELECT pws.* FROM product_workflow_steps pws
+       LEFT JOIN operations op ON op.name = pws.step_name
+      WHERE pws.product_id = $1
+      ORDER BY op.sequence_position NULLS LAST, pws.id`,
     [productId]
   )
   const commentsResult = await db.query(

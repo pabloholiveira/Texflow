@@ -3,9 +3,11 @@ import { useSearchParams } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
+import ProductDetailPanel from '../../components/ui/ProductDetailPanel'
 import { useOrders } from '../../context/ordersContext'
 import { useOperations } from '../../context/operationsContext'
 import { useAuth } from '../../context/authContext'
+import { formatSizes } from '../../data/sizes'
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pendente' },
@@ -132,6 +134,28 @@ function Production() {
 
                   <p>{item.product.orderNumber}</p>
 
+                  {/* Item 4: o card mostra o essencial da peça sem precisar
+                      abrir nada — cor, tecido e quantidade são o que a pessoa
+                      confere antes de pegar o trabalho. O resto (observações,
+                      layout aprovado) fica no detalhe, a um clique. */}
+                  <p className="kanban-card-meta">
+                    {[
+                      item.product.color,
+                      item.product.fabric,
+                      `${item.product.quantity} peças`,
+                    ]
+                      .filter(Boolean)
+                      .join(' • ')}
+                  </p>
+
+                  {item.product.sizes?.length > 0 && (
+                    <p className="kanban-card-meta">{formatSizes(item.product.sizes)}</p>
+                  )}
+
+                  {item.product.files?.some(
+                    (file) => file.category === 'layout_aprovado'
+                  ) && <span className="layout-badge">Layout aprovado</span>}
+
                   {item.product.needsDesignRework && (
                     <span className="rework-badge">Retrabalho de design</span>
                   )}
@@ -187,6 +211,11 @@ function Production() {
       >
         {detailProduct && (
           <>
+            {/* Mesmo painel da tela de Design (item 5) — dados da peça,
+                grade de tamanhos, observações e os arquivos, incluindo o
+                layout aprovado que bordado/silk/costura precisam consultar. */}
+            <ProductDetailPanel product={detailProduct} />
+
             <div className="product-detail-workflow">
               {detailProduct.workflow.map((stage) => (
                 <div className="product-detail-stage" key={stage.step}>

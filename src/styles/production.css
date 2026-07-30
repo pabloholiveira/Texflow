@@ -99,10 +99,16 @@
   margin-bottom: 10px;
 }
 
+/* Separação do painel de detalhe que passou a vir acima (item 4) — sem ela
+   a primeira etapa encosta na lista de arquivos e parece fazer parte dela.
+   Mesmo padrão de divisória usado em .design-upload. */
 .product-detail-workflow {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 24px;
+  padding-top: 20px;
 }
 
 .product-detail-stage {
@@ -130,4 +136,25 @@
   gap: 10px;
   margin-top: 20px;
   font-weight: 500;
+}
+
+/* Informações da peça no card do kanban (item 4, 2026-07-30) — cor, tecido,
+   quantidade e grade, para não precisar abrir o detalhe a cada produto. */
+.kanban-card-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Marca que o layout aprovado já está anexado — o que bordado, silk e
+   costura procuram antes de começar. */
+.layout-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-size: 11px;
+  font-weight: 600;
 }

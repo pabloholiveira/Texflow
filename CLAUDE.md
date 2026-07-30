@@ -261,7 +261,7 @@ Detalhes de implementação que não se deduzem do código:
 
 **Ainda não feito**: nenhuma ação de estágio é atribuída a um setor específico além de `SALES_ROLES` (ver "Important nuance" acima); não há "Reativar usuário" (já era assim antes); e o papel não influencia em nada o que aparece no Dashboard ou nos Relatórios além de esconder a tela inteira. **As contas reais da Kavi foram criadas em 2026-07-29**, logo após o deploy, via `createUser.js` contra o `$DATABASE_PUBLIC_URL` (senha temporária única, para cada pessoa trocar em "Minha Senha"; usernames em minúsculas, e o login diferencia maiúsculas): `pablo` e `elaine` (a dona da loja) como `admin`; `ketylin`, `simone` e `caixa` como `vendedora`; `nilva` (Corte), `cleusa` (Costura), `dulce` (Bordado) e `viana` (Silk) como `producao`, cada uma com sua etapa atribuída em `user_operations`. **Ninguém é `design` ainda** — a Kavi não tem essa função separada hoje. **`caixa` é uma conta compartilhada, não uma pessoa**: como o autor do comentário e o histórico gravam o username, tudo que sair dali aparece como "caixa", sem identificar quem foi — limitação conhecida e aceita. **"Estampa" continua não existindo no catálogo** (a Viana ficou só com `Silk`): quando alguém assumir DTF, é atribuição pela tela, não mudança de código.
 
-## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 3 e 5 done; próximo: item 4)
+## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 3, 4 e 5 done; próximo: item 2)
 
 Seis pontos levantados pelo Pablo usando o sistema, todos ligados ao fluxo de produção e à experiência de quem opera cada etapa. Mesma regra dos outros roadmaps: **um item por vez, testado antes de passar pro próximo**.
 
@@ -309,11 +309,19 @@ Detalhes de comportamento: na tela de Design a categoria do upload **já vem em 
 
 **Verificado: 36 checks de navegador**, com usuários descartáveis de três papéis. Cobriu o painel (incluindo a grade de tamanhos vinda do item 3), o upload real ao Cloudinary aparecendo no painel sem fechar o modal, o contador no card, o bloqueio do upload para quem não é do design, e — seguindo a lição já registrada duas vezes aqui — **o que a refatoração deslocou**: o modal de Arquivos do `OrderDetails` (lista + upload + as duas categorias agrupadas), o do `NewOrder`, o anexo de referência dentro do wizard de produto, e o kanban de design movendo cards nas duas direções depois do modal existir.
 
-### Item 4 — Informações por etapa na Produção (próximo)
+### Item 4 — Informações por etapa na Produção — ✅ done, 2026-07-30
 
-Cada etapa precisa enxergar cor, tecido, quantidade, tamanhos, modelo, observações e o layout aprovado. **O painel já existe** (`ProductDetailPanel`, item 5) — o trabalho é plugá-lo no modal de detalhe que a Produção já tem e enriquecer o card do kanban. **Decisão: uma visão única com tudo, não uma variação por etapa** — olhando a lista do Pablo, Corte, Bordado/Silk/DTF e Costura pedem praticamente o mesmo conjunto; uma visão só é menos código e ninguém fica sem informação por um palpite errado de quem precisa dela.
+Cada etapa passou a enxergar a peça inteira sem sair da tela. **Nada de novo no banco, e quase nada de componente novo** — o `ProductDetailPanel` do item 5 foi plugado no modal de detalhe que a Produção já tinha (é exatamente por isso que o 5 veio antes do 4).
 
-### Item 2 — Aba Conferência (não começado) — **o mais delicado do conjunto**
+- **O card do kanban deixou de ser só o nome**: mostra cor, tecido, quantidade, a grade de tamanhos e um selo verde **"Layout aprovado"** quando o arquivo já está anexado — o que bordado, silk e costura procuram antes de começar. O resto fica a um clique.
+- **Decisão mantida: uma visão única com tudo, não uma variação por etapa.** Corte, Bordado/Silk/DTF e Costura pediam praticamente o mesmo conjunto; uma visão só é menos código e ninguém fica sem informação por um palpite errado de quem precisa dela.
+- O modal manteve o que já tinha (etapas independentes com Voltar/Avançar, respeitando a permissão por etapa, e o checkbox de retrabalho só para quem pode) — o painel entrou acima, separado por uma divisória.
+
+**Bug real encontrado durante a verificação, e corrigido aqui** (não foi introduzido por este item — só ficou evidente nele): `fetchOrders` e `getProductById` buscavam `product_workflow_steps` **sem `ORDER BY`**, então o Postgres devolvia na ordem física das linhas — que **muda quando uma linha é atualizada**. Na prática, a etapa que a pessoa acabava de mover pulava para o fim da lista, embaralhando tanto os chips do `ProductCard` quanto a lista do modal a cada clique. Comprovado medindo a resposta da API antes e depois de um `PATCH` (`['Corte','Costura','Silk']` virava `['Costura','Silk','Corte']`). As duas queries agora ordenam por `op.sequence_position NULLS LAST, pws.id` — a **sequência real de produção**, com etapa fora do catálogo ("outra operação") indo para o fim e o id desempatando para a ordem nunca variar.
+
+**Verificado: 17 checks de navegador** com usuários de produção e admin — card completo com grade e selo de layout, painel com observações e o link real do Cloudinary, permissão por etapa continuando a valer dentro do modal (Corte atribuída com botões, Costura sem), mover etapa pelo modal, e os chips do `ProductCard` no `OrderDetails` saindo na sequência certa depois do fix de ordenação.
+
+### Item 2 — Aba Conferência (próximo) — **o mais delicado do conjunto**
 
 Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta): **`Lavagem`, `Revisão/Finalização` e `Embalagem` saem do kanban de Produção** e passam a existir só numa aba nova, **Conferência**, operada pela vendedora. A Produção fica só com a fabricação (Corte, Costura, Bordado, Silk, DTF). Isso **dispensa uma coluna `review_status`**: a Conferência é uma view filtrada sobre o `product_workflow_steps` que já existe.
 
