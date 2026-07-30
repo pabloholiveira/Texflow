@@ -64,6 +64,18 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/conferencia',
+    label: 'Conferência',
+    // Prancheta com check — conferir antes de entregar.
+    icon: (
+      <>
+        <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" />
+        <path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+        <path d="M9 13l2 2 4-4" />
+      </>
+    ),
+  },
+  {
     to: '/relatorios',
     label: 'Relatórios',
     action: 'reports.view',

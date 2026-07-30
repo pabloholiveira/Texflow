@@ -122,7 +122,12 @@ function Settings() {
     }
   }
 
-  const { whatsappTemplate, updateWhatsappTemplate } = useSettings()
+  const {
+    whatsappTemplate,
+    updateWhatsappTemplate,
+    whatsappReadyTemplate,
+    updateWhatsappReadyTemplate,
+  } = useSettings()
   const [templateDraft, setTemplateDraft] = useState(whatsappTemplate)
 
   // whatsappTemplate chega depois de um fetch assíncrono (o valor inicial
@@ -135,6 +140,25 @@ function Settings() {
   if (whatsappTemplate !== lastSeenTemplate) {
     setLastSeenTemplate(whatsappTemplate)
     setTemplateDraft(whatsappTemplate)
+  }
+
+  // Segunda mensagem (pedido pronto) — mesmo padrão de sincronização do
+  // primeiro template, incluindo o "ajustar estado durante o render" que
+  // evita o lint react-hooks/set-state-in-effect.
+  const [readyDraft, setReadyDraft] = useState(whatsappReadyTemplate)
+  const [lastSeenReady, setLastSeenReady] = useState(whatsappReadyTemplate)
+  if (whatsappReadyTemplate !== lastSeenReady) {
+    setLastSeenReady(whatsappReadyTemplate)
+    setReadyDraft(whatsappReadyTemplate)
+  }
+
+  async function handleSaveReadyTemplate() {
+    if (!readyDraft.trim()) {
+      alert('A mensagem não pode ficar vazia.')
+      return
+    }
+
+    await updateWhatsappReadyTemplate(readyDraft)
   }
 
   async function handleSaveTemplate() {
@@ -301,6 +325,29 @@ function Settings() {
 
           <div className="modal-actions">
             <Button onClick={handleSaveTemplate}>Salvar Mensagem</Button>
+          </div>
+        </section>
+      )}
+
+      {isAdmin && (
+        <section className="form-section">
+          <h2>Mensagem de "pedido pronto"</h2>
+
+          <p>
+            Usada pelo botão "Avisar cliente" na tela de Conferência, quando
+            todos os produtos do pedido terminam a conferência. Aceita as
+            mesmas variáveis da mensagem acima.
+          </p>
+
+          <Textarea
+            label="Mensagem"
+            value={readyDraft}
+            onChange={(event) => setReadyDraft(event.target.value)}
+            rows={8}
+          />
+
+          <div className="modal-actions">
+            <Button onClick={handleSaveReadyTemplate}>Salvar Mensagem</Button>
           </div>
         </section>
       )}

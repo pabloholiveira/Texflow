@@ -261,7 +261,7 @@ Detalhes de implementação que não se deduzem do código:
 
 **Ainda não feito**: nenhuma ação de estágio é atribuída a um setor específico além de `SALES_ROLES` (ver "Important nuance" acima); não há "Reativar usuário" (já era assim antes); e o papel não influencia em nada o que aparece no Dashboard ou nos Relatórios além de esconder a tela inteira. **As contas reais da Kavi foram criadas em 2026-07-29**, logo após o deploy, via `createUser.js` contra o `$DATABASE_PUBLIC_URL` (senha temporária única, para cada pessoa trocar em "Minha Senha"; usernames em minúsculas, e o login diferencia maiúsculas): `pablo` e `elaine` (a dona da loja) como `admin`; `ketylin`, `simone` e `caixa` como `vendedora`; `nilva` (Corte), `cleusa` (Costura), `dulce` (Bordado) e `viana` (Silk) como `producao`, cada uma com sua etapa atribuída em `user_operations`. **Ninguém é `design` ainda** — a Kavi não tem essa função separada hoje. **`caixa` é uma conta compartilhada, não uma pessoa**: como o autor do comentário e o histórico gravam o username, tudo que sair dali aparece como "caixa", sem identificar quem foi — limitação conhecida e aceita. **"Estampa" continua não existindo no catálogo** (a Viana ficou só com `Silk`): quando alguém assumir DTF, é atribuição pela tela, não mudança de código.
 
-## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 3, 4 e 5 done; próximo: item 2)
+## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 2, 3, 4 e 5 done; falta o item 1 e o item 6)
 
 Seis pontos levantados pelo Pablo usando o sistema, todos ligados ao fluxo de produção e à experiência de quem opera cada etapa. Mesma regra dos outros roadmaps: **um item por vez, testado antes de passar pro próximo**.
 
@@ -321,7 +321,7 @@ Cada etapa passou a enxergar a peça inteira sem sair da tela. **Nada de novo no
 
 **Verificado: 17 checks de navegador** com usuários de produção e admin — card completo com grade e selo de layout, painel com observações e o link real do Cloudinary, permissão por etapa continuando a valer dentro do modal (Corte atribuída com botões, Costura sem), mover etapa pelo modal, e os chips do `ProductCard` no `OrderDetails` saindo na sequência certa depois do fix de ordenação.
 
-### Item 2 — Aba Conferência — 🚧 parte 1 (modelo) ✅ done 2026-07-30; parte 2 (tela + WhatsApp) pendente
+### Item 2 — Aba Conferência — ✅ done, 2026-07-30 (duas partes)
 
 Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta): **`Lavagem`, `Revisão/Finalização` e `Embalagem` saem do kanban de Produção** e passam a existir só numa aba nova, **Conferência**, operada pela vendedora. A Produção fica só com a fabricação (Corte, Costura, Bordado, Silk, DTF). Isso **dispensa uma coluna `review_status`**: a Conferência é uma view filtrada sobre o `product_workflow_steps` que já existe.
 
@@ -342,9 +342,18 @@ Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta):
 - **Verificado: 9 checks de API + 11 de navegador** — entrada automática na criação, os quatro cruzamentos de permissão por fase (produção×fabricação, vendedora×fabricação, produção×conferência, vendedora×conferência), a sequência nova (Lavagem libera antes da Revisão, e a Revisão fica barrada enquanto a Lavagem não termina), a edição de etapas preservando as automáticas, e o catálogo expondo `phase`/`autoAdd`.
 - **Estado intermediário conhecido**: as três etapas de Conferência existem nos produtos novos mas **ainda não têm tela** — a parte 2 constrói `/conferencia`. Como nada foi deployado, isso não afeta a Kavi.
 
-**Parte 2 — pendente**: a tela `/conferencia` (kanban das três etapas, operado pela vendedora), o gatilho `producao → conferencia`, e o botão de avisar o cliente quando **todos os produtos do pedido** terminarem a Conferência (segundo template de WhatsApp, chave nova na tabela `settings`).
+**Parte 2 — a tela e o aviso (✅ 2026-07-30, migration `0008`)**:
+- **Novo estágio `'conferencia'`** entre `'producao'` e a entrega (`'entregue'` fica para o item 1). O pedido entra nele **sozinho**, por gatilho em `PATCH /products/:id/workflow/:step`: quando toda a fabricação de todos os produtos termina. Mesma forma dos gatilhos do design — checagem de estado, na mesma transação, sem caminho de volta. Só olha etapas de fase `'producao'`, senão as próprias etapas de Conferência segurariam a entrada na Conferência.
+- **`/conferencia`** repete de propósito a forma da tela de Produção (abas por etapa × três colunas de status): é o mesmo gesto, sobre a mesma tabela, só filtrado por `phase` — quem sabe usar Produção sabe usar isto. Clicar no produto abre o mesmo `ProductDetailPanel` dos itens 4 e 5.
+- **"Pronto" é derivado, não é estágio**: a seção "Prontos para retirada" lista os pedidos cujos produtos concluíram **todas** as suas etapas de conferência, com o botão "Avisar cliente". O gatilho é do **pedido**, não do produto — senão um pedido com 3 produtos mandaria 3 avisos ao cliente.
+- **Segunda mensagem de WhatsApp**: chave `whatsapp_ready_template` na tabela `settings` (que é chave-valor justamente para isto — nenhuma migration), com rota própria, editor em Configurações e os mesmos `{{placeholders}}` da primeira. Continua sendo um link `wa.me` pré-preenchido: **o envio é um clique humano**, não automático.
+- **Backfill (pedido pelo Pablo)**: os produtos que já existiam nasceram antes da entrada automática e passariam pela Conferência sem ninguém conferir. A `0008` insere Revisão/Finalização e Embalagem como `'pending'` em todo produto de pedido **não-rascunho** (`ON CONFLICT DO NOTHING` protege quem já tinha). Rascunhos ficam de fora porque podem ser abandonados. Aplicado no banco local: 7 produtos × 2 etapas = 14 linhas.
+- **Bug real encontrado na verificação**: `GET /operations` ordenava por `id`, e as abas das duas telas saem dali — na Conferência isso apareceu na cara, com **Revisão/Finalização antes de Lavagem** (Revisão tem id menor porque foi semeada antes, mas posição 4 contra 3). Agora ordena por `sequence_position NULLS LAST, id`.
+- **Verificado: 17 checks de navegador** cobrindo o fluxo inteiro — abas na ordem certa, produto aparecendo só nas etapas que tem, a fabricação concluída empurrando o pedido para Conferência sozinho (com o tracker mostrando os 5 estágios), a vendedora executando Revisão e Embalagem, o pedido só entrando em "Prontos" depois da **última** etapa, e o link `wa.me` com a mensagem certa e o telefone normalizado (interceptado, sem navegar).
 
-### Item 1 — Fechamento do pedido (não começado)
+**Sobra para o item 1**: o estágio `'entregue'`, o `picked_up_at` e o botão "Registrar retirada".
+
+### Item 1 — Fechamento do pedido (próximo)
 
 **Seis estágios**: `venda → design → aprovacao → producao → conferencia → entregue`, com **"pronto" derivado** (todas as etapas de Conferência concluídas) em vez de um sétimo estágio — é nesse ponto que aparece o botão de avisar o cliente. `producao → conferencia` automático (espelha os gatilhos do design); `conferencia → entregue` manual, por um botão "Registrar retirada", que **grava também a data/hora da retirada** (decisão do Pablo: estágio **e** carimbo, para um relatório futuro de prazo real). Vai exigir revisar os filtros por estágio que já existem (`Production`, e os dois `WHERE` de `backend/src/routes/reports.js`, que precisam ficar em sincronia).
 

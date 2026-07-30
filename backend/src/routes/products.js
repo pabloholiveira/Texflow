@@ -460,7 +460,7 @@ router.patch(
     // do pedido ler tudo de uma fonte só. É duplicação de dado, mas este é o
     // ÚNICO lugar do sistema que muda status de etapa, então as duas não têm
     // como divergir sem alguém mexer justamente aqui.
-    await withTransaction(async (client) => {
+    const result = await withTransaction(async (client) => {
       await client.query(
         'UPDATE product_workflow_steps SET status = $1 WHERE product_id = $2 AND step_name = $3',
         [nextStatus, id, step]
@@ -475,9 +475,56 @@ router.patch(
         payload: { step, from: previousStatus, to: nextStatus, direction },
         user: req.user.username,
       })
+
+      // Gatilho producao -> conferencia (item 2, parte 2): quando TODA a
+      // fabricação de TODOS os produtos do pedido termina, o pedido passa
+      // para Conferência sozinho. Mesma forma dos gatilhos do kanban de
+      // design: checagem de ESTADO (não de transição), na mesma transação,
+      // e sem caminho de volta — mover uma etapa para trás não regride
+      // estágio, igual ao resto do sistema.
+      //
+      // Só olha etapas de fase 'producao': as três da Conferência (e as
+      // "outra operação" sem fase, que caem em producao) não podem segurar
+      // a entrada na própria Conferência.
+      const orderRow = await client.query('SELECT order_id FROM products WHERE id = $1', [id])
+      const orderId = orderRow.rows[0].order_id
+
+      const toConference = await client.query(
+        `UPDATE orders SET stage = 'conferencia', updated_at = now()
+          WHERE id = $1 AND stage = 'producao'
+            AND NOT EXISTS (
+              SELECT 1
+                FROM product_workflow_steps pws
+                JOIN products p ON p.id = pws.product_id
+                LEFT JOIN operations op ON op.name = pws.step_name
+               WHERE p.order_id = $1
+                 AND COALESCE(op.phase, 'producao') = 'producao'
+                 AND pws.status <> 'done'
+            )`,
+        [orderId]
+      )
+
+      if (toConference.rowCount > 0) {
+        await logEvent(client, {
+          orderId,
+          type: 'order_stage_changed',
+          payload: {
+            from: 'producao',
+            to: 'conferencia',
+            direction: 'forward',
+            trigger: 'producao-concluida',
+          },
+          user: req.user.username,
+        })
+      }
+
+      const stageRow = await client.query('SELECT stage FROM orders WHERE id = $1', [orderId])
+      return { product: await getProductById(client, id), orderStage: stageRow.rows[0].stage }
     })
 
-    res.json(await getProductById(pool, id))
+    // orderStage vai junto (mesmo padrão do design-status): o gatilho acima
+    // pode ter mudado o estágio, e o front atualiza sem refetch.
+    res.json({ ...result.product, orderStage: result.orderStage })
   })
 )
 

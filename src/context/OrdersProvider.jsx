@@ -198,8 +198,23 @@ export function OrdersProvider({ children }) {
 
   async function moveProductStepStatus(orderId, productId, step, direction) {
     try {
-      const product = await productsApi.moveStep(productId, step, direction)
-      replaceProduct(orderId, product)
+      // orderStage vem junto porque concluir a última etapa de fabricação
+      // pode empurrar o pedido para Conferência (gatilho no servidor) —
+      // mesmo padrão de setProductDesignStatus.
+      const { orderStage, ...product } = await productsApi.moveStep(productId, step, direction)
+      setOrders((current) =>
+        current.map((order) =>
+          order.id !== orderId
+            ? order
+            : {
+                ...order,
+                stage: orderStage ?? order.stage,
+                products: order.products.map((item) =>
+                  item.id === product.id ? product : item
+                ),
+              }
+        )
+      )
       return product
     } catch (err) {
       alert(err.message)

@@ -19,7 +19,14 @@ function mapOperation(row) {
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const result = await pool.query('SELECT * FROM operations ORDER BY id')
+    // Ordena pela sequência de produção, não por id: a ordem em que as
+    // operações foram cadastradas não diz nada, e as abas de Produção e de
+    // Conferência saem daqui. Na Conferência isso é gritante — Lavagem (3)
+    // precisa vir antes de Revisão/Finalização (4), mas Revisão tem id menor
+    // porque foi semeada antes. Sem posição vai para o fim, id desempata.
+    const result = await pool.query(
+      'SELECT * FROM operations ORDER BY sequence_position NULLS LAST, id'
+    )
     res.json(result.rows.map(mapOperation))
   })
 )

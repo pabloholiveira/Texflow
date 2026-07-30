@@ -158,3 +158,38 @@
   font-size: 11px;
   font-weight: 600;
 }
+
+/* Pedidos que terminaram a Conferência e estão esperando o cliente buscar
+   (item 2, parte 2). "Pronto" é derivado — não é um estágio próprio. */
+.ready-orders {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.ready-orders h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.ready-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ready-order > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ready-order span {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}

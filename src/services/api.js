@@ -125,4 +125,7 @@ export const settingsApi = {
   getWhatsappTemplate: () => request('/settings/whatsapp-template'),
   updateWhatsappTemplate: (value) =>
     request('/settings/whatsapp-template', { method: 'PUT', body: { value } }),
+  getWhatsappReadyTemplate: () => request('/settings/whatsapp-ready-template'),
+  updateWhatsappReadyTemplate: (value) =>
+    request('/settings/whatsapp-ready-template', { method: 'PUT', body: { value } }),
 }

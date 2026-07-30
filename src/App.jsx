@@ -11,6 +11,7 @@ import Orders from './pages/Orders'
 import OrderDetails from './pages/OrderDetails'
 import Clients from './pages/Clients'
 import Production from './pages/Production'
+import Conference from './pages/Conference'
 import Design from './pages/Design'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
@@ -40,6 +41,7 @@ function App() {
                       setor vê o andamento, mas os botões de mover não aparecem. */}
                   <Route path="/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
                   <Route path="/producao" element={<ProtectedRoute><Production /></ProtectedRoute>} />
+                  <Route path="/conferencia" element={<ProtectedRoute><Conference /></ProtectedRoute>} />
                   <Route path="/relatorios" element={<ProtectedRoute action="reports.view"><Reports /></ProtectedRoute>} />
                   <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 </Routes>

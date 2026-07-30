@@ -39,7 +39,10 @@ CREATE TABLE IF NOT EXISTS orders (
   client_id BIGINT REFERENCES clients(id),
   deadline DATE,
   stage TEXT NOT NULL DEFAULT 'venda'
-    CHECK (stage IN ('venda', 'design', 'aprovacao', 'producao')),
+    -- 'conferencia' (migration 0008): lavagem/revisão/embalagem, feitas pela
+    -- vendedora depois que toda a fabricação termina. O pedido entra nele
+    -- sozinho, por gatilho em PATCH /products/:id/workflow/:step.
+    CHECK (stage IN ('venda', 'design', 'aprovacao', 'producao', 'conferencia')),
   is_draft BOOLEAN NOT NULL DEFAULT true,
   -- Soma de (unit_price * quantity) de todos os produtos do pedido — ver
   -- Funcionalidades comerciais (item 1) no CLAUDE.md. Guardado (não só

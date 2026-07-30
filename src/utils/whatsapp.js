@@ -16,6 +16,18 @@ Falta pagar na retirada: {{faltaPagar}}
 Prazo de entrega: {{prazo}}`
 
 // Mostrado em Configurações como legenda de quais variáveis existem.
+// Segunda mensagem: pedido pronto para retirada (item 2, parte 2).
+// Duplicada de backend/src/routes/settings.js pelo mesmo motivo da primeira
+// — dois processos Node, sem import compartilhado. Usa os mesmos tokens.
+export const DEFAULT_WHATSAPP_READY_TEMPLATE = `Olá! Seu pedido *{{pedido}}* está pronto para retirada. 🎉
+
+Produtos:
+{{produtos}}
+
+Valor total: {{valorTotal}}
+Valor pago: {{valorPago}}
+Falta pagar na retirada: {{faltaPagar}}`
+
 export const WHATSAPP_PLACEHOLDERS = [
   { token: '{{pedido}}', description: 'Número do pedido (ex: PED-2026-0007)' },
   { token: '{{produtos}}', description: 'Lista dos produtos, um por linha' },
