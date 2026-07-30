@@ -419,6 +419,25 @@ Pedido em `'entregue'` **nunca é excluído** — decisão explícita do Pablo: 
 - **Correção de localização feita junto**: `formatHours` usava `toFixed(1)`, que produz `"23.3 dias"` — ponto, não vírgula, num app inteiramente em português. Virou `toLocaleString('pt-BR')` via o helper `decimal()`, que a seção nova também usa. Afeta as duas tabelas que já existiam (é só exibição). `formatDays` mostra inteiro sem casa decimal ("20 dias", não "20,0 dias") e só a média, que raramente é redonda, com uma casa.
 - **Verificação**: 22 checks de API — três cenários montados de propósito (**atrasado**, **adiantado** e **sem prazo**, com `created_at` retrodatado por SQL, já que a API não deixa escolher a data de criação), com **todo o resumo conferido contra a mesma agregação rodada em SQL cru** em vez de valores chumbados no teste; mais ordenação, limite de 20, rascunho ficando de fora e `clientId` cru. E 28 no navegador (desktop e 390px), incluindo os três selos de cumprimento, a tabela rolando no próprio contêiner no celular e zero erro de console. Dois defeitos só apareceram ao **olhar** a captura, não nas asserções: o "20.8" com ponto e uma frase torta na nota de rodapé.
 
+### Serviços externos e custos (levantamento de 2026-07-30)
+
+São **três**, mais o GitHub — levantado das variáveis de ambiente e dependências reais, não de memória:
+
+| Serviço | Para quê | Plano | Uso medido em 30/07/2026 |
+|---|---|---|---|
+| **Railway** | backend Express + PostgreSQL (2 serviços rodando sempre) | não exposto pelo CLI — conferir no painel | banco com **8,8 MB**, 34 pedidos, 133 eventos |
+| **Vercel** | frontend | não exposto pelo CLI | time `tex-flow`, 1 projeto |
+| **Cloudinary** | arquivos por produto | **Free**, confirmado pela API de usage | **0,18 de 25 créditos (0,72%)**, 169 MB, 75 arquivos |
+| **GitHub** | repositório privado | — | 689 KB |
+
+**Nenhuma API paga além dessas.** As únicas URLs externas no código são `wa.me` (link do WhatsApp, sem API e sem custo) e namespaces de SVG. As variáveis que realmente existem são quatro: `DATABASE_URL`, `JWT_SECRET`, `CLOUDINARY_URL` (Railway) e `VITE_API_URL` (Vercel) — a do Cloudinary não aparece em nenhum `process.env` do código porque o SDK a lê sozinho.
+
+**Se o Cloudinary apertar, a saída provavelmente é trocar de provedor, não pagar (decisão do Pablo, 2026-07-30).** O degrau seguinte ao Free é o **Plus, US$ 99/mês** (US$ 89 anual) — não existe nada no meio, e é desproporcional para a Kavi. O Cloudinary foi escolhido em 2026-07-06 pela facilidade de configuração *nessa escala*; **se a escala mudar, a razão da escolha muda junto**, então a análise a fazer é comparar Cloudflare R2 / Backblaze B2 / S3, que cobram por GB sem degrau. Ordem sugerida quando/se o problema aparecer: (1) limpar órfãos, (2) avaliar troca de provedor, (3) só então considerar o Plus.
+
+**Como o modelo de créditos funciona, porque não é óbvio**: 1 crédito = 1 GB armazenado **ou** 1 GB de banda **ou** 1.000 transformações. **Armazenamento acumula; banda zera todo mês** — então o orçamento mensal é "tudo que já foi guardado + o que trafegou no mês", e a folga para banda encolhe conforme o acervo cresce. Com ~2,3 MB por arquivo e um cenário de ~30 pedidos/mês, a projeção grosseira dá **uns 5 anos** até encostar nos 25 GB.
+
+**⚠️ Achado concreto: 75 arquivos no Cloudinary contra 2 linhas em `product_files`** — ou seja, **73 órfãos**, restos das verificações de upload feitas durante o desenvolvimento. É a lacuna de arquivo órfão já documentada (não há rota de delete), vista pelo lado acumulado. Nada foi apagado. O ponto que importa: **o espaço não está sendo consumido pelo uso real da Kavi, e sim por lixo de teste** — então limpar isso vem antes de qualquer conversa sobre plano ou expiração.
+
 ### Arquivos no Cloudinary: NÃO apagar automaticamente (decisão de 2026-07-30)
 
 Cogitou-se excluir referências e layouts do Cloudinary X dias após a entrega, para economizar espaço. **Decidido não fazer** — o risco (cliente voltar pedindo o mesmo design, ou reclamar de algo entregue e a Kavi não ter mais o arquivo de prova) supera o ganho, ainda mais sem saber se o uso real chega perto do limite do plano gratuito. **Não implementar regra automática de exclusão de arquivos.** Se um dia for necessário, é **ação manual, por pedido, decidida pelo Pablo** — nunca automática. Fica registrado só como possibilidade futura; não há nada construído nessa direção (não existe rota de delete de arquivo, ver o item de arquivos por produto no domain model).
