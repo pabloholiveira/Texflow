@@ -18,6 +18,7 @@ import { useProductList } from '../../hooks/useProductList'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
 import { useSettings } from '../../context/settingsContext'
+import { useOperations } from '../../context/operationsContext'
 import { useAuth } from '../../context/authContext'
 import {
   ORDER_STAGES,
@@ -46,6 +47,10 @@ function OrderDetails() {
   // avançar/voltar etapa e adicionar produto são todos "mexer no pedido".
   const { can } = useAuth()
   const canWrite = can('orders.write')
+  const { operationsData } = useOperations()
+  const conferenceStepNames = operationsData
+    .filter((operation) => operation.phase === 'conferencia')
+    .map((operation) => operation.name)
   const order = orders.find((item) => item.id === id)
   const client = order && clients.find((item) => item.id === order.clientId)
 
@@ -184,6 +189,17 @@ function OrderDetails() {
     )
   const autoAdvancePending = waitingDesignApproval || waitingDesignConclusion
 
+  // Fechamento do pedido (item 1): em Conferência, o "Avançar etapa" vira
+  // "Registrar retirada" — é a mesma transição, mas o nome importa: quem
+  // clica está afirmando que o cliente levou a peça, e isso grava a data.
+  // A trava de verdade está no servidor (409); aqui é só não oferecer o
+  // botão antes da hora.
+  const conferenceSteps = order.products.flatMap((item) =>
+    item.workflow.filter((stage) => conferenceStepNames.includes(stage.step))
+  )
+  const conferencePending = conferenceSteps.some((stage) => stage.status !== 'done')
+  const isDelivered = order.stage === 'entregue'
+
   return (
     <Layout>
       <div className="page-header">
@@ -232,6 +248,18 @@ function OrderDetails() {
           <strong>{formatCurrency(order.amountPaid)}</strong>
         </div>
 
+        {order.pickedUpAt && (
+          <div>
+            <span>Retirado em</span>
+            <strong>
+              {new Date(order.pickedUpAt).toLocaleString('pt-BR', {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              })}
+            </strong>
+          </div>
+        )}
+
         <div>
           <span>Falta pagar</span>
           <strong>{formatCurrency(Math.max(order.totalValue - order.amountPaid, 0))}</strong>
@@ -263,9 +291,14 @@ function OrderDetails() {
               <Button
                 variant="secondary"
                 onClick={() => advanceOrderStage(order.id)}
-                disabled={order.stage === 'producao' || autoAdvancePending}
+                disabled={
+                  isDelivered ||
+                  order.stage === 'producao' ||
+                  autoAdvancePending ||
+                  (order.stage === 'conferencia' && conferencePending)
+                }
               >
-                Avançar etapa
+                {order.stage === 'conferencia' ? 'Registrar retirada' : 'Avançar etapa'}
               </Button>
             </div>
           )}
@@ -289,6 +322,13 @@ function OrderDetails() {
           <p className="stage-hint">
             O pedido avança para Aprovação automaticamente quando o design de
             todos os produtos for enviado para aprovação do cliente.
+          </p>
+        )}
+
+        {order.stage === 'conferencia' && conferencePending && (
+          <p className="stage-hint">
+            O pedido fecha quando todos os produtos passarem por lavagem,
+            revisão e embalagem na tela de Conferência.
           </p>
         )}
 

@@ -6,7 +6,14 @@ import { SIZES } from '../data/sizes.js'
 // o backend roda num processo Node separado e não importa esse arquivo,
 // então esta é a versão "de verdade" para o servidor. Se a ordem dos
 // estágios mudar no front, atualize aqui também.
-export const ORDER_STAGES = ['venda', 'design', 'aprovacao', 'producao', 'conferencia']
+export const ORDER_STAGES = [
+  'venda',
+  'design',
+  'aprovacao',
+  'producao',
+  'conferencia',
+  'entregue',
+]
 
 export function getNextStatus(status) {
   if (status === 'pending') return 'in_progress'
@@ -194,6 +201,7 @@ export function mapOrder(orderRow, products = []) {
     isDraft: orderRow.is_draft,
     totalValue: toNumber(orderRow.total_value),
     amountPaid: toNumber(orderRow.amount_paid),
+    pickedUpAt: orderRow.picked_up_at,
     createdAt: orderRow.created_at,
     updatedAt: orderRow.updated_at,
     products,

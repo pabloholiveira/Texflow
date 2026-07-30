@@ -261,7 +261,7 @@ Detalhes de implementação que não se deduzem do código:
 
 **Ainda não feito**: nenhuma ação de estágio é atribuída a um setor específico além de `SALES_ROLES` (ver "Important nuance" acima); não há "Reativar usuário" (já era assim antes); e o papel não influencia em nada o que aparece no Dashboard ou nos Relatórios além de esconder a tela inteira. **As contas reais da Kavi foram criadas em 2026-07-29**, logo após o deploy, via `createUser.js` contra o `$DATABASE_PUBLIC_URL` (senha temporária única, para cada pessoa trocar em "Minha Senha"; usernames em minúsculas, e o login diferencia maiúsculas): `pablo` e `elaine` (a dona da loja) como `admin`; `ketylin`, `simone` e `caixa` como `vendedora`; `nilva` (Corte), `cleusa` (Costura), `dulce` (Bordado) e `viana` (Silk) como `producao`, cada uma com sua etapa atribuída em `user_operations`. **Ninguém é `design` ainda** — a Kavi não tem essa função separada hoje. **`caixa` é uma conta compartilhada, não uma pessoa**: como o autor do comentário e o histórico gravam o username, tudo que sair dali aparece como "caixa", sem identificar quem foi — limitação conhecida e aceita. **"Estampa" continua não existindo no catálogo** (a Viana ficou só com `Silk`): quando alguém assumir DTF, é atribuição pela tela, não mudança de código.
 
-## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 2, 3, 4 e 5 done; falta o item 1 e o item 6)
+## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 1 a 5 done; falta só o item 6)
 
 Seis pontos levantados pelo Pablo usando o sistema, todos ligados ao fluxo de produção e à experiência de quem opera cada etapa. Mesma regra dos outros roadmaps: **um item por vez, testado antes de passar pro próximo**.
 
@@ -353,11 +353,18 @@ Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta):
 
 **Sobra para o item 1**: o estágio `'entregue'`, o `picked_up_at` e o botão "Registrar retirada".
 
-### Item 1 — Fechamento do pedido (próximo)
+### Item 1 — Fechamento do pedido — ✅ done, 2026-07-30
 
-**Seis estágios**: `venda → design → aprovacao → producao → conferencia → entregue`, com **"pronto" derivado** (todas as etapas de Conferência concluídas) em vez de um sétimo estágio — é nesse ponto que aparece o botão de avisar o cliente. `producao → conferencia` automático (espelha os gatilhos do design); `conferencia → entregue` manual, por um botão "Registrar retirada", que **grava também a data/hora da retirada** (decisão do Pablo: estágio **e** carimbo, para um relatório futuro de prazo real). Vai exigir revisar os filtros por estágio que já existem (`Production`, e os dois `WHERE` de `backend/src/routes/reports.js`, que precisam ficar em sincronia).
+Fecha o ciclo: até aqui não havia como dizer "o cliente buscou, acabou" — o pedido ficava em Conferência para sempre. Migration `0009`.
 
-### Item 6 — Esqueci minha senha (não começado, independente)
+- **Sexto e último estágio `'entregue'`**, e **`orders.picked_up_at`** (decisão do Pablo: estágio **e** carimbo, não um ou outro — o estágio diz *que* retirou, a coluna diz *quando*, que é o dado de um relatório futuro de prazo real venda→entrega).
+- **Sem rota nova**: o `PATCH /orders/:id/advance-stage` que já existia ganhou duas particularidades quando o próximo estágio é `'entregue'` — grava `picked_up_at = now()` no mesmo `UPDATE`, e **é o único avanço com trava de verdade no servidor** (409 se algum produto ainda tem etapa de Conferência pendente, listando quais). Isso é diferente do "Avançar etapa" desabilitado em Design/Aprovação, que é só dica visual: dizer que entregou sem ter conferido é um erro de registro que ninguém desfaz depois.
+- **A regressão limpa o carimbo**: sair de `'entregue'` volta `picked_up_at` para NULL — regressão existe para corrigir clique errado, e uma data de retirada num pedido não retirado é pior que data nenhuma.
+- **Na tela**: em Conferência o botão "Avançar etapa" **passa a se chamar "Registrar retirada"** (mesma transição, mas quem clica está afirmando que o cliente levou a peça), desabilitado enquanto a conferência não termina, com `.stage-hint` explicando. `OrderDetails` mostra "Retirado em" quando existe.
+- **Pedido entregue sai das telas de trabalho** (`Production`, `Conference`) e deixa de contar como "ativo" no Dashboard — senão o número só cresceria para sempre. Continua na lista de Pedidos, que é o histórico.
+- **Verificado: 7 checks de API + 13 de navegador** — a trava com conferência pendente (409 nomeando as etapas), o fechamento gravando a data, a regressão limpando o carimbo, `'entregue'` sendo fim de linha (avançar de novo é no-op), os 6 chips no tracker, o botão renomeado/travado/liberado, o histórico registrando a transição, e o pedido sumindo de Produção e Conferência mas permanecendo em Pedidos.
+
+### Item 6 — Esqueci minha senha (próximo, independente)
 
 Botão na tela de login que avisa um admin **dentro do próprio sistema** (os usuários não têm e-mail cadastrado). Nova tabela `password_reset_requests` e uma rota **pública** — a pessoa não está logada, então esta é a primeira rota fora do `requireAuth` além do `/auth/login` e do `/health`; vale manter a mesma convenção anti-enumeração do login (não revelar se o usuário existe). **Ponto em aberto, a decidir com o Pablo**: ele propôs que a aprovação devolva a senha para o padrão `kavi2026`, mas isso deixa a conta acessível com uma senha publicamente conhecida até a pessoa trocar — o "Redefinir Senha" que já existe (o admin digita uma temporária) é mais seguro e o canal de pedido continuaria sendo a novidade do item.
 

@@ -35,7 +35,11 @@ function Dashboard() {
   const { operations } = useOperations()
   const { can } = useAuth()
 
-  const activeOrders = orders.filter((order) => !order.isDraft)
+  // "Ativo" = ainda em andamento: rascunho não conta (nem foi finalizado) e
+  // entregue também não (acabou) — senão o número só cresce para sempre.
+  const activeOrders = orders.filter(
+    (order) => !order.isDraft && order.stage !== 'entregue'
+  )
   const today = todayString()
 
   // "Atrasado" aqui só olha o prazo (deadline < hoje) — o modelo ainda não

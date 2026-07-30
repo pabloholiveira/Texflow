@@ -44,7 +44,9 @@ function Conference() {
   const selectedOperation = manuallySelectedOperation ?? operations[0]
 
   // Mesmo recorte da Produção: pedido real que já saiu da Venda.
-  const visibleOrders = orders.filter((order) => !order.isDraft && order.stage !== 'venda')
+  const visibleOrders = orders.filter(
+    (order) => !order.isDraft && order.stage !== 'venda' && order.stage !== 'entregue'
+  )
 
   const allProducts = visibleOrders.flatMap((order) =>
     order.products.map((product) => ({

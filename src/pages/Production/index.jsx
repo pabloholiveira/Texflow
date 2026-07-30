@@ -52,7 +52,11 @@ function Production() {
     // Desde a integração Design ↔ Produção (item 3.1): produção roda em
     // paralelo com design a partir do momento em que o pedido sai de Venda —
     // não espera mais a aprovação.
-    .filter((order) => !order.isDraft && order.stage !== 'venda')
+    // Pedido entregue sai do quadro: o trabalho acabou e ele só ocuparia
+    // espaço. Antes da Venda também não aparece (nada a fabricar ainda).
+    .filter(
+      (order) => !order.isDraft && order.stage !== 'venda' && order.stage !== 'entregue'
+    )
     .flatMap((order) =>
       order.products.map((product) => ({
         ...product,

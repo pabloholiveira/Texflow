@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS orders (
     -- 'conferencia' (migration 0008): lavagem/revisão/embalagem, feitas pela
     -- vendedora depois que toda a fabricação termina. O pedido entra nele
     -- sozinho, por gatilho em PATCH /products/:id/workflow/:step.
-    CHECK (stage IN ('venda', 'design', 'aprovacao', 'producao', 'conferencia')),
+    -- 'entregue' (migration 0009): cliente retirou, pedido encerrado.
+    CHECK (stage IN ('venda', 'design', 'aprovacao', 'producao', 'conferencia', 'entregue')),
   is_draft BOOLEAN NOT NULL DEFAULT true,
   -- Soma de (unit_price * quantity) de todos os produtos do pedido — ver
   -- Funcionalidades comerciais (item 1) no CLAUDE.md. Guardado (não só
@@ -56,6 +57,9 @@ CREATE TABLE IF NOT EXISTS orders (
   -- e editável depois, via PATCH /orders/:id, pra registrar o restante pago
   -- na retirada.
   amount_paid NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  -- Quando o cliente retirou (migration 0009). O estágio diz QUE retirou;
+  -- esta coluna diz QUANDO, para um relatório futuro de prazo real.
+  picked_up_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT now(),
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );

@@ -4,6 +4,7 @@ export const ORDER_STAGES = [
   { value: 'aprovacao', label: 'Aprovação' },
   { value: 'producao', label: 'Em produção' },
   { value: 'conferencia', label: 'Conferência' },
+  { value: 'entregue', label: 'Entregue' },
 ]
 
 export function getStageState(stage, currentStage) {

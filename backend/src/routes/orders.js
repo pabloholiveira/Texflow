@@ -150,10 +150,45 @@ router.patch(
     const currentIndex = ORDER_STAGES.indexOf(current.rows[0].stage)
     const nextStage = ORDER_STAGES[currentIndex + 1]
 
+    // Entrar em 'entregue' é o fechamento do pedido (item 1) e tem duas
+    // particularidades. A primeira: é o ÚNICO avanço com trava de verdade no
+    // servidor — o pedido só fecha depois que todos os produtos concluíram
+    // todas as suas etapas de Conferência (decisão do Pablo). É diferente do
+    // "Avançar etapa" desabilitado na tela em Design/Aprovação, que é só
+    // dica visual; aqui dizer que entregou sem ter conferido é um erro de
+    // registro que ninguém desfaz depois.
+    if (nextStage === 'entregue') {
+      const pending = await pool.query(
+        `SELECT pws.step_name
+           FROM product_workflow_steps pws
+           JOIN products p ON p.id = pws.product_id
+           JOIN operations op ON op.name = pws.step_name
+          WHERE p.order_id = $1
+            AND op.phase = 'conferencia'
+            AND pws.status <> 'done'
+          LIMIT 5`,
+        [req.params.id]
+      )
+
+      if (pending.rows.length > 0) {
+        const names = [...new Set(pending.rows.map((row) => row.step_name))]
+        return res.status(409).json({
+          error: `Conferência ainda não terminou: ${names.join(', ')}`,
+        })
+      }
+    }
+
     if (nextStage) {
       await withTransaction(async (client) => {
+        // A segunda particularidade: além do estágio, grava QUANDO o cliente
+        // retirou — é o dado que um relatório de prazo real vai querer, e
+        // que o estágio sozinho não guarda.
         await client.query(
-          'UPDATE orders SET stage = $1, updated_at = now() WHERE id = $2',
+          `UPDATE orders
+              SET stage = $1,
+                  updated_at = now(),
+                  picked_up_at = CASE WHEN $1 = 'entregue' THEN now() ELSE picked_up_at END
+            WHERE id = $2`,
           [nextStage, req.params.id]
         )
 
@@ -211,8 +246,15 @@ router.patch(
 
     if (previousStage) {
       await withTransaction(async (client) => {
+        // Sair de 'entregue' limpa o carimbo de retirada: a regressão existe
+        // para corrigir um clique errado, e deixar uma data de retirada num
+        // pedido que não foi retirado é pior que não ter data nenhuma.
         await client.query(
-          'UPDATE orders SET stage = $1, updated_at = now() WHERE id = $2',
+          `UPDATE orders
+              SET stage = $1,
+                  updated_at = now(),
+                  picked_up_at = CASE WHEN stage = 'entregue' THEN NULL ELSE picked_up_at END
+            WHERE id = $2`,
           [previousStage, req.params.id]
         )
         await logEvent(client, {
