@@ -261,6 +261,68 @@ Detalhes de implementação que não se deduzem do código:
 
 **Ainda não feito**: nenhuma ação de estágio é atribuída a um setor específico além de `SALES_ROLES` (ver "Important nuance" acima); não há "Reativar usuário" (já era assim antes); e o papel não influencia em nada o que aparece no Dashboard ou nos Relatórios além de esconder a tela inteira. **As contas reais da Kavi foram criadas em 2026-07-29**, logo após o deploy, via `createUser.js` contra o `$DATABASE_PUBLIC_URL` (senha temporária única, para cada pessoa trocar em "Minha Senha"; usernames em minúsculas, e o login diferencia maiúsculas): `pablo` e `elaine` (a dona da loja) como `admin`; `ketylin`, `simone` e `caixa` como `vendedora`; `nilva` (Corte), `cleusa` (Costura), `dulce` (Bordado) e `viana` (Silk) como `producao`, cada uma com sua etapa atribuída em `user_operations`. **Ninguém é `design` ainda** — a Kavi não tem essa função separada hoje. **`caixa` é uma conta compartilhada, não uma pessoa**: como o autor do comentário e o histórico gravam o username, tudo que sair dali aparece como "caixa", sem identificar quem foi — limitação conhecida e aceita. **"Estampa" continua não existindo no catálogo** (a Viana ficou só com `Silk`): quando alguém assumir DTF, é atribuição pela tela, não mudança de código.
 
+## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO
+
+Seis pontos levantados pelo Pablo usando o sistema, todos ligados ao fluxo de produção e à experiência de quem opera cada etapa. Mesma regra dos outros roadmaps: **um item por vez, testado antes de passar pro próximo**.
+
+**Ordem acordada: 3 → 5 → 4 → 2 → 1**, com o **6 solto** (não depende de nada). O motivo é dependência de conteúdo, apontada pelo próprio Pablo: a grade de tamanhos (3) e o layout aprovado visível (5) são justamente parte das informações que a visão da Produção (4) precisa mostrar — construir 4 antes deixaria a tela incompleta e obrigaria a voltar nela duas vezes. E 2 antes de 1 porque a Conferência é que define quando um pedido *pode* ser fechado.
+
+**Levantamento feito antes de planejar, que encolheu dois itens:**
+- **O upload do layout aprovado já existe** — `product_files` tem as categorias `referencia` e `layout_aprovado` desde 2026-07-06, com Cloudinary funcionando. O item 5 é **visibilidade** (fazer aparecer no Design e na Produção), não construção.
+- **A Produção já tem modal de detalhe** (clicar no nome do produto no kanban); ele só mostra as etapas e o checkbox de retrabalho. O item 4 é enriquecer esse modal.
+- **O reset de senha já existe** (admin redefine em Configurações → Usuários). O item 6 é o **canal de pedido**, não o mecanismo.
+
+**Correção de expectativa registrada com o Pablo**: a mensagem de "pedido pronto" **não será automática**. A integração atual monta um link `wa.me` pré-preenchido e um humano clica em enviar; envio sem intervenção exigiria a API oficial do WhatsApp Business (paga, com aprovação de template pela Meta). Vai precisar de um **segundo template** — a tabela `settings` é chave-valor justamente pra isso, então é uma chave nova, sem migration.
+
+### Item 3 — Grade de tamanhos — 🚧 código pronto, **verificação de navegador NÃO confirmada**
+
+**Estado exato em 2026-07-29 (nada commitado, tudo no working tree).** Não commitar sem antes reconfirmar o teste de navegador (ver "Próximo passo" abaixo).
+
+Decisões do Pablo:
+- **Lista fixa de 19 tamanhos**, não texto livre: `1, 2, 4, 6, 8, 10, 12, 14, 16, PP, P, M, G, GG, EXG, G1, G2, G3, G4`. O conjunto da Kavi é fechado e conhecido, diferente de Modelo/Cor/Tecido — evita erro de digitação e deixa o preenchimento mais rápido. (Ele disse "21 valores" mas listou 19; confirmado que são 19 mesmo.) Tamanho novo no futuro = mudança pontual, sem tela de catálogo.
+- **`products.quantity` vira a SOMA da grade**, calculada no servidor, com o campo virando somente-leitura na tela. O motivo é dinheiro: o valor do pedido é `unit_price * quantity`, e grade somando 10 com quantidade dizendo 12 deixaria ninguém sabendo qual número acreditar. **Produto sem grade continua com a quantidade digitada à mão** — é o caso de todos os produtos que já existem.
+- **`TEXT` + `CHECK`, não `ENUM`** (mesma razão do topo do `schema.sql`), e **a ordem de exibição mora no código**, não no banco: um CHECK valida mas não ordena, e ordem alfabética colocaria `'10'` antes de `'2'` e `'EXG'` antes de `'G'`.
+
+Arquivos tocados (todos **sem commit**): `backend/src/db/migrations/0006_product_sizes.sql` (novo), `backend/src/data/sizes.js` (novo), `backend/src/db/schema.sql`, `backend/src/db/ordersQueries.js` (`saveProductSizes`, `recalculateProductQuantity`, `sizes` no `mapProduct`/`fetchOrders`/`getProductById`), `backend/src/routes/orderProducts.js`, `backend/src/routes/products.js` (PATCH aceita editar **só** a grade, daí o `SELECT` de existência: sem UPDATE não haveria como detectar 404), `src/data/sizes.js` (novo — `sizesToList`/`sizesToMap`/`sumSizes`/`formatSizes`), `src/components/ui/Input.jsx` (props `readOnly` e `hint`), `src/components/ui/ProductFields.jsx` (a grade), `src/components/ui/ProductCard.jsx`, `src/hooks/useProductList.js`, `src/styles/forms.css`.
+
+**A grade circula como objeto (`{ P: 2, EXG: 8 }`) dentro do formulário e como lista (`[{ size, quantity }]`) na API** — `sizesToList`/`sizesToMap` (`src/data/sizes.js`) são a fronteira entre os dois formatos, chamadas no `useProductList`. O objeto é o que um campo-por-tamanho preenche naturalmente; a lista é o que a tabela guarda.
+
+**Verificado até aqui:**
+- **API: 22 checks passando** (18 + 4 de uma rodada de reconferência) — quantidade derivando da soma, grade voltando na ordem canônica mesmo enviada fora de ordem, valor do pedido recalculado pela quantidade derivada, tamanho fora da lista e tamanho repetido rejeitados com 400, produto sem grade seguindo com a quantidade digitada, edição só-da-grade, `quantity` enviada junto com grade sendo ignorada, grade vazia devolvendo o controle pra quantidade manual, tamanho com 0 descartado em vez de virar linha, e o `ON DELETE CASCADE` apagando a grade junto com o produto.
+- **Navegador: 13 checks passaram** (os 19 tamanhos na tela, soma ao vivo, campo somente-leitura com a dica, apagar tamanho recalculando, card mostrando "2 P · 8 EXG" e "10 peças", "Editar Dados" trazendo a grade preenchida e somando o tamanho novo).
+- **NÃO confirmado: persistência depois de recarregar a página.** A execução parou nesse ponto. **A causa provável é o próprio teste, não o código**: ele dava `reload()` em `/pedidos/novo`, e essa página cria um pedido-rascunho novo a cada montagem (comportamento intencional, documentado em "NewOrder creates a real (draft) order on mount"), então o produto anterior não estaria lá mesmo. Precisa ser refeito **abrindo o pedido finalizado em `/pedidos/:id`**, não recarregando o Novo Pedido. Enquanto isso não for confirmado, o item não está fechado.
+
+**Migration `0006` foi aplicada só no banco LOCAL. Produção (Railway) não foi tocada** — nem migration, nem `railway up`, nem push.
+
+**Próximo passo na volta**: reexecutar a verificação de navegador (persistência via `/pedidos/:id`); estando tudo certo, commitar o item 3 e seguir para o **item 5**, depois 4, 2 e 1.
+
+### Item 5 — Design clicável + layout aprovado (não começado)
+
+Clicar no produto na tela `/design` abre uma visão com informações do produto, os arquivos de referência (logo etc.) e a área de upload do PDF do layout aprovado. **Risco já identificado**: toda a lógica de upload vive hoje no `useProductList`, que é *por pedido*, e a tela de Design é *entre pedidos* — vai precisar extrair a parte de arquivos para algo que funcione com um `productId` solto. É refatoração, não invenção, mas é onde o item pode crescer. O componente de visão detalhada nasce aqui e é **reusado no item 4**, em vez de duas telas parecidas mantidas em paralelo.
+
+### Item 4 — Informações por etapa na Produção (não começado)
+
+Cada etapa precisa enxergar cor, tecido, quantidade, tamanhos, modelo, observações e o layout aprovado. **Decisão: uma visão única com tudo, não uma variação por etapa** — olhando a lista do Pablo, Corte, Bordado/Silk/DTF e Costura pedem praticamente o mesmo conjunto; uma visão só é menos código e ninguém fica sem informação por um palpite errado de quem precisa dela.
+
+### Item 2 — Aba Conferência (não começado) — **o mais delicado do conjunto**
+
+Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta): **`Lavagem`, `Revisão/Finalização` e `Embalagem` saem do kanban de Produção** e passam a existir só numa aba nova, **Conferência**, operada pela vendedora. A Produção fica só com a fabricação (Corte, Costura, Bordado, Silk, DTF). Isso **dispensa uma coluna `review_status`**: a Conferência é uma view filtrada sobre o `product_workflow_steps` que já existe.
+
+- **Continuam sendo `operations` no mesmo catálogo.** A mudança estrutural é **uma coluna**: `operations.phase` (`'producao'` | `'conferencia'`, default `'producao'`). Dela saem, da mesma fonte: quais abas cada tela mostra e quem tem permissão de mexer.
+- **A mudança de permissão não some, muda de forma**: `PATCH /products/:id/workflow/:step` continua sendo a mesma rota, então precisa saber que as três de Conferência são de `SALES_ROLES` e as outras de `PRODUCTION_ROLES` — mas via `phase`, não exceção por usuário.
+- **As posições da sequência estão na ordem errada pro que ele quer.** Hoje: `Revisão/Finalização`=3, `Lavagem`=4, `Embalagem`=5 — ou seja, o sistema exige Revisão **antes** de Lavagem. A sequência desejada é Lavagem → Revisão/Finalização → Embalagem, então a migration precisa reposicionar: Lavagem 3, Revisão/Finalização 4, Embalagem 5.
+- **Entrada automática, com uma exceção**: todo produto **novo** nasce com `Revisão/Finalização` e `Embalagem` (tudo é conferido e embalado); **`Lavagem` continua opcional**, escolhida no cadastro — nem toda peça é lavada, e obrigá-la viraria clique de mentirinha. Isso preserva a regra de domínio de que o workflow é escolhido produto a produto. **Produtos que já existem não recebem as etapas retroativamente**; como a condição de avanço é "todas as etapas de Conferência concluídas", quem não tem nenhuma passa direto e os pedidos em voo não travam.
+- **Gatilho do WhatsApp**: não é a Embalagem *daquele produto* — a mensagem é sobre o **pedido**, e um pedido com 3 produtos mandaria 3 avisos. O gatilho é **"todos os produtos do pedido terminaram a Conferência"**.
+- **Entregar em duas partes testáveis**: primeiro o modelo (`phase`, reposicionamento, entrada automática), depois a tela e o gatilho do WhatsApp.
+
+### Item 1 — Fechamento do pedido (não começado)
+
+**Seis estágios**: `venda → design → aprovacao → producao → conferencia → entregue`, com **"pronto" derivado** (todas as etapas de Conferência concluídas) em vez de um sétimo estágio — é nesse ponto que aparece o botão de avisar o cliente. `producao → conferencia` automático (espelha os gatilhos do design); `conferencia → entregue` manual, por um botão "Registrar retirada", que **grava também a data/hora da retirada** (decisão do Pablo: estágio **e** carimbo, para um relatório futuro de prazo real). Vai exigir revisar os filtros por estágio que já existem (`Production`, e os dois `WHERE` de `backend/src/routes/reports.js`, que precisam ficar em sincronia).
+
+### Item 6 — Esqueci minha senha (não começado, independente)
+
+Botão na tela de login que avisa um admin **dentro do próprio sistema** (os usuários não têm e-mail cadastrado). Nova tabela `password_reset_requests` e uma rota **pública** — a pessoa não está logada, então esta é a primeira rota fora do `requireAuth` além do `/auth/login` e do `/health`; vale manter a mesma convenção anti-enumeração do login (não revelar se o usuário existe). **Ponto em aberto, a decidir com o Pablo**: ele propôs que a aprovação devolva a senha para o padrão `kavi2026`, mas isso deixa a conta acessível com uma senha publicamente conhecida até a pessoa trocar — o "Redefinir Senha" que já existe (o admin digita uma temporária) é mais seguro e o canal de pedido continuaria sendo a novidade do item.
+
 ## Possível expansão futura (não é prioridade agora)
 
 Existe a possibilidade de, no futuro, o TexFlow ser adaptado para venda a outras confecções (modelo SaaS), não só uso interno da Kavi. O domain model atual (pedido → produtos → workflow independente, operações configuráveis) já é razoavelmente genérico e ajuda nessa direção, mas isso exigiria mudanças significativas de arquitetura: multi-tenancy (isolar dados por empresa), configuração por empresa das operações/catálogos, autenticação multiempresa, e decisões de modelo de negócio (cobrança, suporte, onboarding).
