@@ -10,6 +10,7 @@ import {
   recalculateOrderTotal,
   saveProductSizes,
   recalculateProductQuantity,
+  getAutoAddOperationNames,
 } from '../db/ordersQueries.js'
 import { normalizeSizes } from '../data/sizes.js'
 import { logEvent } from '../db/eventsQueries.js'
@@ -326,7 +327,13 @@ router.put(
   requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
     const productId = req.params.id
-    const desired = new Set(req.body.operations || [])
+    // As etapas automáticas (auto_add) entram na lista mesmo sem virem do
+    // formulário — a tela nem as exibe, então sem isto salvar uma edição de
+    // etapas apagaria a Revisão/Finalização e a Embalagem do produto.
+    const desired = new Set([
+      ...(req.body.operations || []),
+      ...(await getAutoAddOperationNames(pool)),
+    ])
 
     // Espelha saveWorkflow (useProductList.js): só quem é realmente novo
     // entra como 'pending'; quem já existia mantém o status como está;
@@ -377,19 +384,41 @@ router.put(
 
 router.patch(
   '/:id/workflow/:step',
-  requireRole(...PRODUCTION_ROLES),
   asyncHandler(async (req, res) => {
     const { id, step } = req.params
     const { direction } = req.body
 
-    // Gate de AUTORIZAÇÃO (migration 0005): o requireRole acima já garantiu
-    // que é admin ou produção; aqui checa se ESTA pessoa opera ESTA etapa.
-    // Vem antes de qualquer leitura do produto — não faz sentido calcular
-    // sequência de quem não pode mexer de todo jeito.
-    if (!(await canOperateStep(req.user, step))) {
-      return res.status(403).json({
-        error: `Você não tem permissão para operar a etapa "${step}"`,
-      })
+    // Gate de AUTORIZAÇÃO — não dá pra resolver no requireRole da rota
+    // porque depende de QUAL etapa está sendo movida (migration 0007):
+    // - fase 'conferencia' (Lavagem, Revisão/Finalização, Embalagem) é da
+    //   vendedora, o fechamento comercial da peça;
+    // - fase 'producao' é da produção, e ainda passa pelo canOperateStep,
+    //   que confere se ESTA pessoa tem ESTA etapa atribuída (migration 0005).
+    // Etapa fora do catálogo ("outra operação" digitada na venda) não tem
+    // fase: cai em 'producao', o mesmo tratamento que sempre teve.
+    const stepOperation = await pool.query(
+      'SELECT phase, sequence_position FROM operations WHERE name = $1',
+      [step]
+    )
+    const phase = stepOperation.rows[0]?.phase ?? 'producao'
+
+    if (phase === 'conferencia') {
+      if (!SALES_ROLES.includes(req.user.role)) {
+        return res.status(403).json({
+          error: `A etapa "${step}" é da Conferência, feita pela vendedora`,
+        })
+      }
+    } else {
+      if (!PRODUCTION_ROLES.includes(req.user.role)) {
+        return res.status(403).json({
+          error: 'Seu perfil não tem permissão para esta ação',
+        })
+      }
+      if (!(await canOperateStep(req.user, step))) {
+        return res.status(403).json({
+          error: `Você não tem permissão para operar a etapa "${step}"`,
+        })
+      }
     }
 
     const current = await pool.query(
@@ -404,10 +433,6 @@ router.patch(
     // iniciada, a etapa anda livre — ver modelo de "posição em camadas" no
     // CLAUDE.md (domain model).
     if (direction === 'forward' && current.rows[0].status === 'pending') {
-      const stepOperation = await pool.query(
-        'SELECT sequence_position FROM operations WHERE name = $1',
-        [step]
-      )
       const stepPosition = stepOperation.rows[0]?.sequence_position
 
       if (stepPosition != null) {

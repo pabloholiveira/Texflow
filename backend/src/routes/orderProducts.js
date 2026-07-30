@@ -6,6 +6,7 @@ import {
   recalculateOrderTotal,
   saveProductSizes,
   recalculateProductQuantity,
+  getAutoAddOperationNames,
 } from '../db/ordersQueries.js'
 import { normalizeSizes } from '../data/sizes.js'
 import { logEvent } from '../db/eventsQueries.js'
@@ -125,7 +126,15 @@ router.post(
       // Operações escolhidas na criação sempre entram como 'pending' —
       // é uma decisão de venda (quais operações), não de produção
       // (status de cada uma) — ver domain model no CLAUDE.md.
-      for (const step of operations) {
+      //
+      // Às escolhidas somam-se as automáticas (auto_add, migration 0007):
+      // Revisão/Finalização e Embalagem entram em todo produto novo, porque
+      // tudo é conferido e embalado antes de entregar. Set() evita duplicar
+      // caso a etapa também tenha sido marcada à mão.
+      const autoAdd = await getAutoAddOperationNames(client)
+      const allSteps = [...new Set([...operations, ...autoAdd])]
+
+      for (const step of allSteps) {
         await client.query(
           'INSERT INTO product_workflow_steps (product_id, step_name, status) VALUES ($1, $2, $3)',
           [productId, step, 'pending']

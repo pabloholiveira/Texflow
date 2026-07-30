@@ -12,22 +12,25 @@ const DEMO_CLIENT_DOCUMENT = '00000000000'
 // isso, um banco novo começa com a tabela `operations` vazia (o schema não
 // insere nada sozinho) e a tela de Novo Pedido não tem nenhuma etapa pra
 // escolher até alguém cadastrar uma na mão em Configurações.
+// phase/auto_add: ver migration 0007. As três de conferência ficam com as
+// posições 3/4/5 na ordem Lavagem → Revisão/Finalização → Embalagem.
 const DEFAULT_OPERATIONS = [
-  { name: 'Corte', position: 1 },
-  { name: 'Bordado', position: 2 },
-  { name: 'Silk', position: 2 },
-  { name: 'DTF', position: 2 },
-  { name: 'Costura', position: 2 },
-  { name: 'Revisão/Finalização', position: 3 },
-  { name: 'Lavagem', position: 4 },
-  { name: 'Embalagem', position: 5 },
+  { name: 'Corte', position: 1, phase: 'producao', autoAdd: false },
+  { name: 'Bordado', position: 2, phase: 'producao', autoAdd: false },
+  { name: 'Silk', position: 2, phase: 'producao', autoAdd: false },
+  { name: 'DTF', position: 2, phase: 'producao', autoAdd: false },
+  { name: 'Costura', position: 2, phase: 'producao', autoAdd: false },
+  { name: 'Lavagem', position: 3, phase: 'conferencia', autoAdd: false },
+  { name: 'Revisão/Finalização', position: 4, phase: 'conferencia', autoAdd: true },
+  { name: 'Embalagem', position: 5, phase: 'conferencia', autoAdd: true },
 ]
 
 async function seedOperations() {
   for (const operation of DEFAULT_OPERATIONS) {
     await pool.query(
-      'INSERT INTO operations (name, sequence_position) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
-      [operation.name, operation.position]
+      `INSERT INTO operations (name, sequence_position, phase, auto_add)
+       VALUES ($1, $2, $3, $4) ON CONFLICT (name) DO NOTHING`,
+      [operation.name, operation.position, operation.phase, operation.autoAdd]
     )
   }
 }

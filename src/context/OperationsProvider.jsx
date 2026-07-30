@@ -5,9 +5,10 @@ import { operationsApi } from '../services/api'
 
 export function OperationsProvider({ children }) {
   const { isAuthenticated } = useAuth()
-  // Guarda {id, name} internamente (precisa do id pra poder chamar DELETE
-  // /operations/:id), mas expõe `operations` como string[] pra Settings,
-  // Production e OperationsChecklist não precisarem mudar nada.
+  // Guarda o objeto inteiro internamente (precisa do id pra chamar DELETE
+  // /operations/:id, e de phase/autoAdd desde a migration 0007), mas expõe
+  // `operations` como string[] — a forma que a maioria das telas consome.
+  // Quem precisa filtrar por fase usa `operationsData`.
   const [operationsData, setOperationsData] = useState([])
 
   // Mesma razão do OrdersProvider: só busca depois de logado, e refaz

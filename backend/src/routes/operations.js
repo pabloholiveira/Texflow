@@ -6,17 +6,21 @@ import { ADMIN_ONLY } from '../auth/permissions.js'
 
 const router = Router()
 
+function mapOperation(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    position: row.sequence_position,
+    phase: row.phase,
+    autoAdd: row.auto_add,
+  }
+}
+
 router.get(
   '/',
   asyncHandler(async (req, res) => {
     const result = await pool.query('SELECT * FROM operations ORDER BY id')
-    res.json(
-      result.rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        position: row.sequence_position,
-      }))
-    )
+    res.json(result.rows.map(mapOperation))
   })
 )
 
@@ -24,19 +28,19 @@ router.post(
   '/',
   requireRole(...ADMIN_ONLY),
   asyncHandler(async (req, res) => {
-    const { name, position = null } = req.body
+    const { name, position = null, phase = 'producao', autoAdd = false } = req.body
     if (!name) return res.status(400).json({ error: 'name é obrigatório' })
+    if (!['producao', 'conferencia'].includes(phase)) {
+      return res.status(400).json({ error: "phase deve ser 'producao' ou 'conferencia'" })
+    }
 
     try {
       const result = await pool.query(
-        'INSERT INTO operations (name, sequence_position) VALUES ($1, $2) RETURNING *',
-        [name, position]
+        `INSERT INTO operations (name, sequence_position, phase, auto_add)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [name, position, phase, autoAdd]
       )
-      res.status(201).json({
-        id: result.rows[0].id,
-        name: result.rows[0].name,
-        position: result.rows[0].sequence_position,
-      })
+      res.status(201).json(mapOperation(result.rows[0]))
     } catch (err) {
       if (err.code === '23505') {
         return res.status(409).json({ error: 'Essa operação já existe' })

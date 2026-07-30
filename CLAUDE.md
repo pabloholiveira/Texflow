@@ -321,7 +321,7 @@ Cada etapa passou a enxergar a peça inteira sem sair da tela. **Nada de novo no
 
 **Verificado: 17 checks de navegador** com usuários de produção e admin — card completo com grade e selo de layout, painel com observações e o link real do Cloudinary, permissão por etapa continuando a valer dentro do modal (Corte atribuída com botões, Costura sem), mover etapa pelo modal, e os chips do `ProductCard` no `OrderDetails` saindo na sequência certa depois do fix de ordenação.
 
-### Item 2 — Aba Conferência (próximo) — **o mais delicado do conjunto**
+### Item 2 — Aba Conferência — 🚧 parte 1 (modelo) ✅ done 2026-07-30; parte 2 (tela + WhatsApp) pendente
 
 Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta): **`Lavagem`, `Revisão/Finalização` e `Embalagem` saem do kanban de Produção** e passam a existir só numa aba nova, **Conferência**, operada pela vendedora. A Produção fica só com a fabricação (Corte, Costura, Bordado, Silk, DTF). Isso **dispensa uma coluna `review_status`**: a Conferência é uma view filtrada sobre o `product_workflow_steps` que já existe.
 
@@ -330,7 +330,19 @@ Abordagem definida pelo Pablo (segunda versão, melhor que a primeira proposta):
 - **As posições da sequência estão na ordem errada pro que ele quer.** Hoje: `Revisão/Finalização`=3, `Lavagem`=4, `Embalagem`=5 — ou seja, o sistema exige Revisão **antes** de Lavagem. A sequência desejada é Lavagem → Revisão/Finalização → Embalagem, então a migration precisa reposicionar: Lavagem 3, Revisão/Finalização 4, Embalagem 5.
 - **Entrada automática, com uma exceção**: todo produto **novo** nasce com `Revisão/Finalização` e `Embalagem` (tudo é conferido e embalado); **`Lavagem` continua opcional**, escolhida no cadastro — nem toda peça é lavada, e obrigá-la viraria clique de mentirinha. Isso preserva a regra de domínio de que o workflow é escolhido produto a produto. **Produtos que já existem não recebem as etapas retroativamente**; como a condição de avanço é "todas as etapas de Conferência concluídas", quem não tem nenhuma passa direto e os pedidos em voo não travam.
 - **Gatilho do WhatsApp**: não é a Embalagem *daquele produto* — a mensagem é sobre o **pedido**, e um pedido com 3 produtos mandaria 3 avisos. O gatilho é **"todos os produtos do pedido terminaram a Conferência"**.
-- **Entregar em duas partes testáveis**: primeiro o modelo (`phase`, reposicionamento, entrada automática), depois a tela e o gatilho do WhatsApp.
+- **Entregue em duas partes testáveis**: primeiro o modelo, depois a tela e o gatilho do WhatsApp.
+
+**Parte 1 — o modelo (✅ 2026-07-30, migration `0007`)**:
+- **Duas colunas em `operations`, nenhuma tabela nova**: `phase` (`'producao'` | `'conferencia'`) e `auto_add`. A Conferência é uma **visão filtrada sobre o `product_workflow_steps` que já existe** — foi a abordagem do Pablo que dispensou a coluna `review_status` que eu tinha proposto.
+- **`auto_add` é coluna, não dois nomes fixos no código**: Revisão/Finalização e Embalagem entram sozinhas em todo produto novo; Lavagem **não** (nem toda peça é lavada). Hardcodar os dois nomes contrariaria o catálogo ser configurável por princípio, e quebraria se alguém renomeasse a operação em Configurações.
+- **A permissão saiu do `requireRole` da rota e foi para dentro do handler**, porque depende de QUAL etapa está sendo movida: fase `'conferencia'` → `SALES_ROLES`; fase `'producao'` → `PRODUCTION_ROLES` **mais** o `canOperateStep` (etapa atribuída ao usuário, migration 0005). Etapa fora do catálogo não tem fase e cai em `'producao'`, o tratamento que sempre teve.
+- **Reposicionamento obrigatório**: as posições eram Revisão=3, Lavagem=4, Embalagem=5 — o gate de sequência exigia **Revisão antes de Lavagem**, o inverso da sequência combinada. Agora Lavagem=3, Revisão=4, Embalagem=5.
+- **Armadilha real evitada**: `PUT /products/:id/workflow` substitui o conjunto de etapas, e o checklist não exibe as automáticas — sem reaplicá-las no servidor, **salvar uma edição de etapas apagaria Revisão/Finalização e Embalagem do produto**. O `PUT` agora faz a união com as `auto_add`. Pela mesma razão, o `extraSteps` do `OperationsChecklist` (que existe para manter visível uma etapa fora do catálogo) precisou excluí-las: elas cairiam ali e voltariam à tela justamente ao editar um produto que já as tem.
+- **Front**: `Production` filtra as abas por `phase === 'producao'` (Lavagem, Revisão e Embalagem sumiram do kanban) e `OperationsChecklist` esconde as `auto_add`, mantendo Lavagem selecionável.
+- **Verificado: 9 checks de API + 11 de navegador** — entrada automática na criação, os quatro cruzamentos de permissão por fase (produção×fabricação, vendedora×fabricação, produção×conferência, vendedora×conferência), a sequência nova (Lavagem libera antes da Revisão, e a Revisão fica barrada enquanto a Lavagem não termina), a edição de etapas preservando as automáticas, e o catálogo expondo `phase`/`autoAdd`.
+- **Estado intermediário conhecido**: as três etapas de Conferência existem nos produtos novos mas **ainda não têm tela** — a parte 2 constrói `/conferencia`. Como nada foi deployado, isso não afeta a Kavi.
+
+**Parte 2 — pendente**: a tela `/conferencia` (kanban das três etapas, operado pela vendedora), o gatilho `producao → conferencia`, e o botão de avisar o cliente quando **todos os produtos do pedido** terminarem a Conferência (segundo template de WhatsApp, chave nova na tabela `settings`).
 
 ### Item 1 — Fechamento do pedido (não começado)
 

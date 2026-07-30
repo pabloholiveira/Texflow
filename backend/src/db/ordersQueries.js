@@ -100,6 +100,15 @@ export async function recalculateProductQuantity(db, productId) {
   return result.rows[0]?.quantity ?? null
 }
 
+// Etapas que entram sozinhas em todo produto novo (operations.auto_add,
+// migration 0007) — hoje Revisão/Finalização e Embalagem. Consultado na
+// criação do produto E na edição de etapas: sem reaplicar na edição, salvar
+// o formulário (que nem mostra essas duas) apagaria as duas do produto.
+export async function getAutoAddOperationNames(db) {
+  const result = await db.query('SELECT name FROM operations WHERE auto_add = true')
+  return result.rows.map((row) => row.name)
+}
+
 function groupBy(rows, key) {
   return rows.reduce((acc, row) => {
     const groupKey = row[key]

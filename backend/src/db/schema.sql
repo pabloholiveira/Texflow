@@ -137,7 +137,19 @@ CREATE TABLE IF NOT EXISTS operations (
   -- na mesma posição não dependem umas das outras, só das de posição menor —
   -- ver PATCH /products/:id/workflow/:step e o modelo documentado no CLAUDE.md.
   -- NULL = fora da sequência (nunca é bloqueada, nunca bloqueia ninguém).
-  sequence_position INTEGER
+  sequence_position INTEGER,
+  -- De quem é a etapa (migration 0007): 'producao' é fabricação (kanban de
+  -- Produção, operada por quem tem a etapa atribuída); 'conferencia' é o
+  -- fechamento comercial da peça (aba Conferência, operada pela vendedora).
+  -- Dessa coluna saem, da mesma fonte, o filtro das duas telas e a permissão
+  -- na rota que move etapa.
+  phase TEXT NOT NULL DEFAULT 'producao'
+    CHECK (phase IN ('producao', 'conferencia')),
+  -- Entra sozinha em todo produto novo (Revisão/Finalização e Embalagem):
+  -- tudo é conferido e embalado. Lavagem fica de fora de propósito — nem
+  -- toda peça é lavada. Também é reaplicada em PUT /products/:id/workflow,
+  -- pra uma edição de etapas não conseguir removê-la sem querer.
+  auto_add BOOLEAN NOT NULL DEFAULT false
 );
 
 -- Etapa 7 do roadmap (CLAUDE.md): login básico. Os papéis por setor chegaram

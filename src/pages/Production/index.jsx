@@ -22,7 +22,13 @@ function getStatusLabel(status) {
 function Production() {
   const { orders, moveProductStepStatus, toggleProductDesignRework } =
     useOrders()
-  const { operations } = useOperations()
+  // Só as etapas de fabricação: Lavagem, Revisão/Finalização e Embalagem
+  // saíram daqui (item 2) e viraram a aba Conferência, operada pela
+  // vendedora. O filtro lê operations.phase, não uma lista de nomes.
+  const { operationsData } = useOperations()
+  const operations = operationsData
+    .filter((operation) => operation.phase === 'producao')
+    .map((operation) => operation.name)
   // canOperateStep espelha o gate do backend: além do papel, um usuário de
   // produção só mexe nas etapas atribuídas a ele. Precisa do catálogo
   // (`operations`) porque etapa fora dele — a "outra operação" digitada na
