@@ -46,6 +46,10 @@ async function request(path, options = {}) {
 
 export const authApi = {
   login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
+  // Rota pública (fora do requireAuth) — quem esqueceu a senha não consegue
+  // se autenticar para pedir.
+  requestPasswordReset: (username) =>
+    request('/auth/password-reset-request', { method: 'POST', body: { username } }),
 }
 
 export const ordersApi = {
@@ -119,6 +123,11 @@ export const usersApi = {
   resetPassword: (id, newPassword) =>
     request(`/users/${id}/password`, { method: 'PATCH', body: { newPassword } }),
   deactivate: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+  passwordResetRequests: () => request('/users/password-reset-requests'),
+  approvePasswordReset: (requestId) =>
+    request(`/users/password-reset-requests/${requestId}/approve`, { method: 'PATCH' }),
+  rejectPasswordReset: (requestId) =>
+    request(`/users/password-reset-requests/${requestId}/reject`, { method: 'PATCH' }),
 }
 
 export const settingsApi = {

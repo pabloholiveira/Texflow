@@ -217,3 +217,22 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- Fila de "esqueci minha senha" (migration 0010). Os usuários não têm e-mail
+-- cadastrado, então não há reset por link: a pessoa pede pela tela de login
+-- (rota pública) e um admin aprova em Configurações, o que devolve a senha
+-- para o padrão. O índice parcial garante no máximo um pedido pendente por
+-- usuário — a rota é pública, e sem ele cinco cliques viram cinco pedidos.
+CREATE TABLE IF NOT EXISTS password_reset_requests (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pendente'
+    CHECK (status IN ('pendente', 'aprovado', 'recusado')),
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMP,
+  resolved_by TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS password_reset_requests_one_pending
+  ON password_reset_requests (user_id)
+  WHERE status = 'pendente';

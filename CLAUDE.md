@@ -261,7 +261,7 @@ Detalhes de implementação que não se deduzem do código:
 
 **Ainda não feito**: nenhuma ação de estágio é atribuída a um setor específico além de `SALES_ROLES` (ver "Important nuance" acima); não há "Reativar usuário" (já era assim antes); e o papel não influencia em nada o que aparece no Dashboard ou nos Relatórios além de esconder a tela inteira. **As contas reais da Kavi foram criadas em 2026-07-29**, logo após o deploy, via `createUser.js` contra o `$DATABASE_PUBLIC_URL` (senha temporária única, para cada pessoa trocar em "Minha Senha"; usernames em minúsculas, e o login diferencia maiúsculas): `pablo` e `elaine` (a dona da loja) como `admin`; `ketylin`, `simone` e `caixa` como `vendedora`; `nilva` (Corte), `cleusa` (Costura), `dulce` (Bordado) e `viana` (Silk) como `producao`, cada uma com sua etapa atribuída em `user_operations`. **Ninguém é `design` ainda** — a Kavi não tem essa função separada hoje. **`caixa` é uma conta compartilhada, não uma pessoa**: como o autor do comentário e o histórico gravam o username, tudo que sair dali aparece como "caixa", sem identificar quem foi — limitação conhecida e aceita. **"Estampa" continua não existindo no catálogo** (a Viana ficou só com `Silk`): quando alguém assumir DTF, é atribuição pela tela, não mudança de código.
 
-## Fluxo de produção e operação (roadmap, started 2026-07-29) — 🚧 EM ANDAMENTO (itens 1 a 5 done; falta só o item 6)
+## Fluxo de produção e operação (roadmap, started 2026-07-29) — ✅ COMPLETO (6/6, 2026-07-30) — não deployado
 
 Seis pontos levantados pelo Pablo usando o sistema, todos ligados ao fluxo de produção e à experiência de quem opera cada etapa. Mesma regra dos outros roadmaps: **um item por vez, testado antes de passar pro próximo**.
 
@@ -364,9 +364,21 @@ Fecha o ciclo: até aqui não havia como dizer "o cliente buscou, acabou" — o 
 - **Pedido entregue sai das telas de trabalho** (`Production`, `Conference`) e deixa de contar como "ativo" no Dashboard — senão o número só cresceria para sempre. Continua na lista de Pedidos, que é o histórico.
 - **Verificado: 7 checks de API + 13 de navegador** — a trava com conferência pendente (409 nomeando as etapas), o fechamento gravando a data, a regressão limpando o carimbo, `'entregue'` sendo fim de linha (avançar de novo é no-op), os 6 chips no tracker, o botão renomeado/travado/liberado, o histórico registrando a transição, e o pedido sumindo de Produção e Conferência mas permanecendo em Pedidos.
 
-### Item 6 — Esqueci minha senha (próximo, independente)
+### Item 6 — Esqueci minha senha — ✅ done, 2026-07-30 — **fecha o roadmap**
 
-Botão na tela de login que avisa um admin **dentro do próprio sistema** (os usuários não têm e-mail cadastrado). Nova tabela `password_reset_requests` e uma rota **pública** — a pessoa não está logada, então esta é a primeira rota fora do `requireAuth` além do `/auth/login` e do `/health`; vale manter a mesma convenção anti-enumeração do login (não revelar se o usuário existe). **Ponto em aberto, a decidir com o Pablo**: ele propôs que a aprovação devolva a senha para o padrão `kavi2026`, mas isso deixa a conta acessível com uma senha publicamente conhecida até a pessoa trocar — o "Redefinir Senha" que já existe (o admin digita uma temporária) é mais seguro e o canal de pedido continuaria sendo a novidade do item.
+Os usuários da Kavi não têm e-mail cadastrado, então não existe reset por link: a pessoa registra um pedido pela tela de login e um admin aprova dentro do próprio sistema. Migration `0010`.
+
+- **`POST /auth/password-reset-request` é a única rota pública além do login e do `/health`** — e tem que ser: quem esqueceu a senha não consegue se autenticar para pedir. Fica em `auth.js` porque é o único router montado **antes** do `requireAuth`.
+- **Anti-enumeração**: responde sempre a mesma mensagem de sucesso, exista o usuário ou não — mesma convenção que o login já usava para não revelar quais usernames existem.
+- **Índice UNIQUE parcial** (`WHERE status = 'pendente'`): no máximo um pedido pendente por usuário, quantos resolvidos quiserem. Sem ele, cinco cliques em "esqueci minha senha" virariam cinco linhas na fila do admin — e a rota é pública, então nem precisa de má intenção. Verificado: 3 cliques = 1 pedido.
+- **Ordem das rotas importou**: `/users/password-reset-requests` precisa ser declarada **antes** de `/users/:id`, senão o Express lê o caminho como um id. Mesma armadilha já registrada no `App.jsx` (`/pedidos/novo` antes de `/pedidos/:id`).
+- **Aprovar devolve a senha para `kavi2026`** (decisão do Pablo, mantida depois de eu levantar que isso deixa a conta com uma senha conhecida até a troca; o raciocínio dele é que a pessoa troca no primeiro acesso). A troca de senha e o fechamento do pedido acontecem **na mesma transação**. A resposta devolve a senha padrão para a tela mostrá-la a quem aprovou — é o admin que avisa a pessoa. **O sistema NÃO obriga a troca no primeiro acesso**; não existe esse mecanismo, depende de a pessoa ir em Minha Senha.
+- **Sem notificação ativa**: a seção "Pedidos de senha" em Configurações só aparece quando há pendentes, e o admin a vê quando abre a tela. Não há e-mail, badge no menu nem push — combinado que o canal é "dentro do sistema".
+- **Verificado: 12 checks de API + 11 de navegador** — rota pública funcionando deslogado, resposta idêntica para usuário inexistente, o índice parcial impedindo duplicatas, a fila sendo só de admin (403 para vendedora), a rota não sendo engolida por `/:id`, aprovar trocando a senha de verdade (login novo passa, antigo dá 401), aprovar duas vezes dando 404, e o fluxo humano inteiro: pedir na tela de login → admin aprovar e ver qual senha informar → a pessoa entrar com a padrão e trocar em Minha Senha.
+
+## Estado do roadmap: ✅ os 6 itens fechados (2026-07-30)
+
+**Nada foi deployado.** Cinco migrations (`0006` a `0010`) rodaram **só no banco local**; produção (Railway/Vercel) segue exatamente como estava antes de 2026-07-29. Quando for subir, vale a ordem de sempre — migrations → `railway up` → `git push` — e agora com atenção redobrada, porque é um lote grande: grade de tamanhos, fases de operação com reposicionamento, backfill de duas etapas em todos os produtos, dois estágios novos de pedido e a fila de reset de senha.
 
 ## Possível expansão futura (não é prioridade agora)
 

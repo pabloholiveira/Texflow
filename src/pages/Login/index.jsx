@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/authContext'
+import { authApi } from '../../services/api'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import '../../styles/login.css'
@@ -11,6 +12,24 @@ function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Item 6: sem e-mail cadastrado não dá pra mandar link de recuperação, então
+  // o "esqueci minha senha" registra um pedido que um admin aprova dentro do
+  // sistema. Reaproveita o usuário já digitado no formulário — pedir o nome
+  // de novo num prompt seria atrito à toa.
+  async function handleForgotPassword() {
+    if (!username) {
+      alert('Digite seu usuário primeiro, depois clique em "Esqueci minha senha".')
+      return
+    }
+
+    try {
+      const data = await authApi.requestPasswordReset(username)
+      alert(data.message)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -69,6 +88,10 @@ function Login() {
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Entrando...' : 'Entrar'}
         </Button>
+
+        <button type="button" className="login-forgot" onClick={handleForgotPassword}>
+          Esqueci minha senha
+        </button>
       </form>
     </div>
   )

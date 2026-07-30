@@ -37,6 +37,97 @@ router.get(
   })
 )
 
+// Item 6: fila de pedidos de "esqueci minha senha". Estas três rotas
+// precisam vir ANTES de '/:id' — o Express casa na ordem de declaração, e
+// '/:id' engoliria '/password-reset-requests' lendo o caminho como um id.
+// Mesma armadilha já registrada no App.jsx do front ('/pedidos/novo' antes
+// de '/pedidos/:id').
+//
+// Senha padrão do reset (decisão do Pablo): aprovar devolve a senha para
+// este valor, e a pessoa troca em Configurações > Minha Senha depois de
+// entrar. O sistema NÃO obriga essa troca — não existe esse mecanismo.
+const DEFAULT_PASSWORD = 'kavi2026'
+
+router.get(
+  '/password-reset-requests',
+  requireRole(...ADMIN_ONLY),
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT r.id, r.status, r.created_at, u.username
+         FROM password_reset_requests r
+         JOIN users u ON u.id = r.user_id
+        WHERE r.status = 'pendente'
+        ORDER BY r.created_at`
+    )
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        username: row.username,
+        status: row.status,
+        createdAt: row.created_at,
+      }))
+    )
+  })
+)
+
+router.patch(
+  '/password-reset-requests/:requestId/approve',
+  requireRole(...ADMIN_ONLY),
+  asyncHandler(async (req, res) => {
+    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10)
+
+    // Trocar a senha e fechar o pedido na mesma transação: aprovar sem
+    // trocar deixaria a pessoa esperando por algo que já foi "resolvido",
+    // e trocar sem fechar deixaria o pedido para sempre na fila do admin.
+    const result = await withTransaction(async (client) => {
+      const found = await client.query(
+        "SELECT user_id FROM password_reset_requests WHERE id = $1 AND status = 'pendente'",
+        [req.params.requestId]
+      )
+      if (found.rows.length === 0) return null
+
+      await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
+        passwordHash,
+        found.rows[0].user_id,
+      ])
+      const updated = await client.query(
+        `UPDATE password_reset_requests
+            SET status = 'aprovado', resolved_at = now(), resolved_by = $1
+          WHERE id = $2
+        RETURNING id`,
+        [req.user.username, req.params.requestId]
+      )
+      return updated.rows[0]
+    })
+
+    if (!result) {
+      return res.status(404).json({ error: 'Pedido não encontrado ou já resolvido' })
+    }
+
+    // Devolve a senha padrão para a tela poder mostrá-la a quem aprovou —
+    // é o admin que avisa a pessoa, então ele precisa saber qual é.
+    res.json({ id: result.id, defaultPassword: DEFAULT_PASSWORD })
+  })
+)
+
+router.patch(
+  '/password-reset-requests/:requestId/reject',
+  requireRole(...ADMIN_ONLY),
+  asyncHandler(async (req, res) => {
+    const result = await pool.query(
+      `UPDATE password_reset_requests
+          SET status = 'recusado', resolved_at = now(), resolved_by = $1
+        WHERE id = $2 AND status = 'pendente'
+      RETURNING id`,
+      [req.user.username, req.params.requestId]
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado ou já resolvido' })
+    }
+    res.json({ id: result.rows[0].id })
+  })
+)
+
 // Admin vê qualquer um; qualquer pessoa vê a si mesma (é o que a seção
 // "Minha Senha" precisa saber, sem exigir ser admin pra isso).
 router.get(

@@ -82,3 +82,21 @@
   font-size: 15px;
   margin-top: 6px;
 }
+
+/* "Esqueci minha senha" — ação secundária, discreta abaixo do botão
+   principal (item 6). */
+.login-forgot {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 12px 0 0;
+  text-decoration: underline;
+}
+
+.login-forgot:hover {
+  background: none;
+  color: var(--color-primary);
+}

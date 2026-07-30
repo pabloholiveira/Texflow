@@ -35,4 +35,40 @@ router.post(
   })
 )
 
+// Item 6: pedido de reset de senha. Fica em auth.js de propósito — é o
+// único router montado ANTES do requireAuth (junto com /health), e tem que
+// ser assim: quem esqueceu a senha não consegue se autenticar para pedir.
+//
+// Responde 200 genérico mesmo quando o usuário não existe ou está inativo,
+// pela mesma razão do login logo acima: não confirmar para um estranho
+// quais usernames existem. O ON CONFLICT casa com o índice parcial
+// (um pendente por usuário) — pedir de novo não duplica nem dá erro.
+router.post(
+  '/password-reset-request',
+  asyncHandler(async (req, res) => {
+    const { username } = req.body
+
+    if (!username) {
+      return res.status(400).json({ error: 'Informe o usuário' })
+    }
+
+    const { rows } = await pool.query(
+      'SELECT id FROM users WHERE username = $1 AND is_active = true',
+      [username]
+    )
+
+    if (rows.length > 0) {
+      await pool.query(
+        `INSERT INTO password_reset_requests (user_id) VALUES ($1)
+         ON CONFLICT DO NOTHING`,
+        [rows[0].id]
+      )
+    }
+
+    res.json({
+      message: 'Pedido registrado. Avise um administrador para liberar sua senha.',
+    })
+  })
+)
+
 export default router

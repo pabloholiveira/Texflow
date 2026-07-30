@@ -46,6 +46,42 @@ function Settings() {
     emptyOwnPasswordDraft
   )
 
+  // Fila de pedidos de "esqueci minha senha" (item 6). Só admin enxerga.
+  // Não há notificação ativa — o admin vê quando abre Configurações.
+  const [resetRequests, setResetRequests] = useState([])
+  useEffect(() => {
+    if (!isAdmin) return
+
+    usersApi
+      .passwordResetRequests()
+      .then(setResetRequests)
+      .catch((err) => alert(err.message))
+  }, [isAdmin])
+
+  async function approveResetRequest(request) {
+    try {
+      const data = await usersApi.approvePasswordReset(request.id)
+      setResetRequests((current) => current.filter((item) => item.id !== request.id))
+      alert(
+        `Senha de "${request.username}" liberada. Informe a ela a senha ${data.defaultPassword} — ` +
+          'e peça que troque em Configurações > Minha Senha.'
+      )
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function rejectResetRequest(request) {
+    if (!confirm(`Recusar o pedido de "${request.username}"?`)) return
+
+    try {
+      await usersApi.rejectPasswordReset(request.id)
+      setResetRequests((current) => current.filter((item) => item.id !== request.id))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   function handleOwnPasswordChange(event) {
     const { name, value } = event.target
     setOwnPasswordDraft((current) => ({ ...current, [name]: value }))
@@ -381,6 +417,39 @@ function Settings() {
           <Button onClick={handleChangeOwnPassword}>Trocar Senha</Button>
         </div>
       </section>
+
+      {isAdmin && resetRequests.length > 0 && (
+        <section className="form-section">
+          <h2>Pedidos de senha</h2>
+
+          <p>
+            Quem clicou em "Esqueci minha senha" na tela de login. Aprovar
+            devolve a senha da pessoa para o padrão.
+          </p>
+
+          <div className="operations-settings-list">
+            {resetRequests.map((request) => (
+              <div className="operations-settings-item" key={request.id}>
+                <span>
+                  {request.username}
+                  {' — '}
+                  {new Date(request.createdAt).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  })}
+                </span>
+
+                <div className="modal-actions">
+                  <Button onClick={() => approveResetRequest(request)}>Aprovar</Button>
+                  <Button variant="secondary" onClick={() => rejectResetRequest(request)}>
+                    Recusar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {isAdmin && (
         <section className="form-section">
