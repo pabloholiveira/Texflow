@@ -1,7 +1,13 @@
 import { Router } from 'express'
 import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { getProductById, recalculateOrderTotal } from '../db/ordersQueries.js'
+import {
+  getProductById,
+  recalculateOrderTotal,
+  saveProductSizes,
+  recalculateProductQuantity,
+} from '../db/ordersQueries.js'
+import { normalizeSizes } from '../data/sizes.js'
 import { logEvent } from '../db/eventsQueries.js'
 import { requireRole } from '../middleware/requireRole.js'
 import { SALES_ROLES } from '../auth/permissions.js'
@@ -27,10 +33,25 @@ router.post(
       unitPrice = null,
       needsVectorization = false,
       vectorizationPrice = null,
+      sizes,
     } = req.body
 
-    if (!type || !quantity) {
-      return res.status(400).json({ error: 'type e quantity são obrigatórios' })
+    // Grade de tamanhos (item 3): quando vem preenchida, ELA é a fonte da
+    // quantidade — o total vira a soma e o que o front tiver mandado em
+    // `quantity` é ignorado. Sem grade, segue exigindo a quantidade digitada.
+    let normalizedSizes
+    try {
+      normalizedSizes = normalizeSizes(sizes)
+    } catch (err) {
+      return res.status(400).json({ error: err.message })
+    }
+
+    const sizesTotal = normalizedSizes.reduce((sum, entry) => sum + entry.quantity, 0)
+
+    if (!type || (!quantity && sizesTotal === 0)) {
+      return res
+        .status(400)
+        .json({ error: 'type é obrigatório, e a quantidade (ou a grade de tamanhos)' })
     }
 
     const result = await withTransaction(async (client) => {
@@ -67,7 +88,7 @@ router.post(
           model,
           color,
           fabric,
-          quantity,
+          sizesTotal > 0 ? sizesTotal : quantity,
           observations,
           unitPrice,
           needsVectorization,
@@ -81,7 +102,13 @@ router.post(
         orderId,
         productId,
         type: 'product_created',
-        payload: { type, model, quantity, operations },
+        payload: {
+          type,
+          model,
+          quantity: sizesTotal > 0 ? sizesTotal : quantity,
+          sizes: normalizedSizes,
+          operations,
+        },
         user: req.user.username,
       })
 
@@ -105,6 +132,13 @@ router.post(
         )
       }
 
+      if (normalizedSizes.length > 0) {
+        await saveProductSizes(client, productId, normalizedSizes)
+        await recalculateProductQuantity(client, productId)
+      }
+
+      // Depois da grade: o total do pedido usa unit_price * quantity, e a
+      // quantidade pode ter acabado de ser derivada da grade.
       const orderTotalValue = await recalculateOrderTotal(client, orderId)
       return { product: await getProductById(client, productId), orderTotalValue }
     })

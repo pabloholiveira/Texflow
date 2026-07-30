@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useOrders } from '../context/ordersContext'
 import { useAuth } from '../context/authContext'
+import { sizesToList, sizesToMap, sumSizes } from '../data/sizes'
 
 const emptyProduct = {
   type: '',
@@ -8,6 +9,9 @@ const emptyProduct = {
   color: '',
   fabric: '',
   quantity: '',
+  // Grade de tamanhos como objeto ({ P: 2 }) enquanto está no formulário;
+  // vira lista na hora de mandar pra API — ver src/data/sizes.js.
+  sizes: {},
   observations: '',
   unitPrice: '',
   needsVectorization: false,
@@ -91,8 +95,10 @@ export function useProductList(orderId) {
   }
 
   function goToOperationsStep() {
-    if (!product.type || !product.quantity) {
-      alert('Preencha pelo menos o tipo da peça e a quantidade.')
+    // Grade preenchida já define a quantidade (o servidor soma), então ela
+    // vale como resposta pra "quantas peças?".
+    if (!product.type || (!product.quantity && sumSizes(product.sizes) === 0)) {
+      alert('Preencha o tipo da peça e a quantidade (ou a grade de tamanhos).')
       return
     }
 
@@ -111,6 +117,7 @@ export function useProductList(orderId) {
       unitPrice: product.unitPrice === '' ? null : Number(product.unitPrice),
       vectorizationPrice:
         product.vectorizationPrice === '' ? null : Number(product.vectorizationPrice),
+      sizes: sizesToList(product.sizes),
       operations: selectedSteps,
     })
 
@@ -159,6 +166,7 @@ export function useProductList(orderId) {
       color: target.color || '',
       fabric: target.fabric || '',
       quantity: target.quantity,
+      sizes: sizesToMap(target.sizes),
       observations: target.observations || '',
       unitPrice: target.unitPrice ?? '',
       needsVectorization: target.needsVectorization,
@@ -179,8 +187,8 @@ export function useProductList(orderId) {
   }
 
   async function saveInfoEdit() {
-    if (!infoDraft.type || !infoDraft.quantity) {
-      alert('Preencha pelo menos o tipo da peça e a quantidade.')
+    if (!infoDraft.type || (!infoDraft.quantity && sumSizes(infoDraft.sizes) === 0)) {
+      alert('Preencha o tipo da peça e a quantidade (ou a grade de tamanhos).')
       return
     }
 
@@ -192,6 +200,7 @@ export function useProductList(orderId) {
       unitPrice: infoDraft.unitPrice === '' ? null : Number(infoDraft.unitPrice),
       vectorizationPrice:
         infoDraft.vectorizationPrice === '' ? null : Number(infoDraft.vectorizationPrice),
+      sizes: sizesToList(infoDraft.sizes),
     })
     if (updated) closeInfoModal()
   }

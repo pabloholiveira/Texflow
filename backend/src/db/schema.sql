@@ -79,6 +79,23 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
+-- Grade de tamanhos do produto (migration 0006). products.quantity passa a
+-- ser a SOMA desta grade quando ela existe — recalculada no servidor, nunca
+-- enviada pelo front (ver recalculateProductQuantity). Produto sem grade
+-- continua com a quantidade digitada à mão, como sempre foi.
+-- Ver 0006_product_sizes.sql para o raciocínio de TEXT+CHECK, da chave
+-- composta e de por que a ordem de exibição mora no código.
+CREATE TABLE IF NOT EXISTS product_sizes (
+  product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  size TEXT NOT NULL CHECK (size IN (
+    '1', '2', '4', '6', '8', '10', '12', '14', '16',
+    'PP', 'P', 'M', 'G', 'GG', 'EXG',
+    'G1', 'G2', 'G3', 'G4'
+  )),
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  PRIMARY KEY (product_id, size)
+);
+
 CREATE TABLE IF NOT EXISTS product_workflow_steps (
   id BIGSERIAL PRIMARY KEY,
   product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,

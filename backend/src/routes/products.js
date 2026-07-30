@@ -8,7 +8,10 @@ import {
   getPreviousStatus,
   findBlockingSteps,
   recalculateOrderTotal,
+  saveProductSizes,
+  recalculateProductQuantity,
 } from '../db/ordersQueries.js'
+import { normalizeSizes } from '../data/sizes.js'
 import { logEvent } from '../db/eventsQueries.js'
 import { canOperateStep } from '../db/usersQueries.js'
 import { requireRole } from '../middleware/requireRole.js'
@@ -203,9 +206,28 @@ router.patch(
       needsVectorization: 'needs_vectorization',
       vectorizationPrice: 'vectorization_price',
     }
-    const updates = Object.entries(req.body).filter(([key]) => key in columnMap)
+    // A grade de tamanhos não entra no columnMap: mora em outra tabela e é
+    // gravada por saveProductSizes, não por UPDATE em products.
+    const hasSizes = 'sizes' in req.body
+    let normalizedSizes = []
+    if (hasSizes) {
+      try {
+        normalizedSizes = normalizeSizes(req.body.sizes)
+      } catch (err) {
+        return res.status(400).json({ error: err.message })
+      }
+    }
 
-    if (updates.length === 0) {
+    const updates = Object.entries(req.body).filter(([key]) => {
+      if (!(key in columnMap)) return false
+      // Com grade preenchida, a quantidade é derivada dela — ignora o que o
+      // front mandou em `quantity` em vez de gravar e sobrescrever logo em
+      // seguida (ver recalculateProductQuantity).
+      if (key === 'quantity' && normalizedSizes.length > 0) return false
+      return true
+    })
+
+    if (updates.length === 0 && !hasSizes) {
       return res.status(400).json({ error: 'Nenhum campo válido para atualizar' })
     }
 
@@ -219,21 +241,38 @@ router.patch(
     // mesma operação — ver recalculateOrderTotal (Funcionalidades comerciais
     // no CLAUDE.md).
     const result = await withTransaction(async (client) => {
-      const updated = await client.query(
-        `UPDATE products SET ${setClause} WHERE id = $${values.length + 1} RETURNING order_id`,
-        [...values, req.params.id]
-      )
-      if (updated.rows.length === 0) return null
+      // Editar SÓ a grade é um caso válido (nenhuma coluna de products muda),
+      // e aí não há UPDATE pra dizer se o produto existe — daí o SELECT.
+      const found = await client.query('SELECT order_id FROM products WHERE id = $1', [
+        req.params.id,
+      ])
+      if (found.rows.length === 0) return null
+      const orderId = found.rows[0].order_id
+
+      if (updates.length > 0) {
+        await client.query(
+          `UPDATE products SET ${setClause} WHERE id = $${values.length + 1}`,
+          [...values, req.params.id]
+        )
+      }
+
+      if (hasSizes) {
+        await saveProductSizes(client, req.params.id, normalizedSizes)
+        await recalculateProductQuantity(client, req.params.id)
+      }
 
       await logEvent(client, {
-        orderId: updated.rows[0].order_id,
+        orderId,
         productId: req.params.id,
         type: 'product_updated',
-        payload: { fields: updates.map(([key]) => key) },
+        payload: {
+          fields: [...updates.map(([key]) => key), ...(hasSizes ? ['sizes'] : [])],
+          ...(hasSizes ? { sizes: normalizedSizes } : {}),
+        },
         user: req.user.username,
       })
 
-      const orderTotalValue = await recalculateOrderTotal(client, updated.rows[0].order_id)
+      const orderTotalValue = await recalculateOrderTotal(client, orderId)
       return { product: await getProductById(client, req.params.id), orderTotalValue }
     })
 

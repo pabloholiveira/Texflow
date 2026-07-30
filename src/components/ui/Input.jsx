@@ -8,6 +8,11 @@ function Input({
   onChange,
   name,
   step,
+  // readOnly (e não disabled) quando o valor é calculado pelo sistema: um
+  // campo disabled não é lido por leitor de tela nem recebe foco, e aqui o
+  // número continua sendo informação que a pessoa precisa conseguir ler.
+  readOnly = false,
+  hint,
 }) {
   // useId (React 19) gera um id único e estável por INSTÂNCIA do componente —
   // é o que permite dois <Input label="Modelo"> na mesma tela sem colidir.
@@ -28,7 +33,10 @@ function Input({
         value={value}
         onChange={onChange}
         step={step}
+        readOnly={readOnly}
       />
+
+      {hint && <small className="input-hint">{hint}</small>}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import Button from './Button'
 import { formatCurrency } from '../../utils/currency'
 import { useAuth } from '../../context/authContext'
+import { formatSizes } from '../../data/sizes'
 
 function getOverallStatus(workflow) {
   if (!workflow || workflow.length === 0) {
@@ -54,6 +55,13 @@ function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, on
           <span>Quantidade</span>
           <strong>{product.quantity} peças</strong>
         </div>
+
+        {product.sizes?.length > 0 && (
+          <div>
+            <span>Tamanhos</span>
+            <strong>{formatSizes(product.sizes)}</strong>
+          </div>
+        )}
 
         <div>
           <span>Cor</span>

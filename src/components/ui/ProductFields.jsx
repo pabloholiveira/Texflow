@@ -4,6 +4,7 @@ import SuggestibleInput from './SuggestibleInput'
 import Button from './Button'
 import Modal from './Modal'
 import { useOrders } from '../../context/ordersContext'
+import { SIZES, sumSizes } from '../../data/sizes'
 
 function getDistinctValues(products, field) {
   return [...new Set(products.map((product) => product[field]).filter(Boolean))]
@@ -20,6 +21,27 @@ function emitFieldChange(onChange, name, value) {
 function ProductFields({ product, onChange }) {
   const { orders } = useOrders()
   const allProducts = orders.flatMap((order) => order.products)
+
+  // A grade circula pelo formulário como objeto ({ P: 2, EXG: 8 }) — ver
+  // src/data/sizes.js. Vazia = produto sem grade, que continua tendo a
+  // quantidade digitada à mão (é o caso de todos os produtos que já existem).
+  const sizesMap = product.sizes || {}
+  const sizesTotal = sumSizes(sizesMap)
+  const hasSizes = sizesTotal > 0
+
+  function handleSizeChange(size, rawValue) {
+    const next = { ...sizesMap }
+
+    // Campo apagado ou zerado = esse tamanho sai da grade, em vez de ficar
+    // gravado com zero (o banco recusa quantity = 0 justamente por isso).
+    if (rawValue === '' || Number(rawValue) <= 0) {
+      delete next[size]
+    } else {
+      next[size] = Number(rawValue)
+    }
+
+    emitFieldChange(onChange, 'sizes', next)
+  }
 
   // Só existe enquanto o modal de "quanto cobrar pela vetorização" está
   // aberto — não é o valor final, que só é gravado ao confirmar.
@@ -95,9 +117,14 @@ function ProductFields({ product, onChange }) {
         label="Quantidade"
         type="number"
         placeholder="Ex: 50"
-        value={product.quantity}
+        // Com grade preenchida a quantidade é a soma dela, calculada no
+        // servidor — o campo vira espelho, pra ninguém digitar 12 embaixo de
+        // uma grade que soma 10 (o valor do pedido sai desse número).
+        value={hasSizes ? sizesTotal : product.quantity}
         onChange={onChange}
         name="quantity"
+        readOnly={hasSizes}
+        hint={hasSizes ? 'Somado da grade de tamanhos abaixo' : undefined}
       />
 
       <Input
@@ -117,6 +144,32 @@ function ProductFields({ product, onChange }) {
         onChange={onChange}
         name="observations"
       />
+
+      <div className="size-grid-field">
+        <span className="size-grid-label">Grade de tamanhos</span>
+        <p className="size-grid-help">
+          Preencha quantas peças de cada tamanho. Deixe em branco os que não
+          fazem parte do pedido.
+        </p>
+
+        <div className="size-grid">
+          {SIZES.map((size) => (
+            <label className="size-cell" key={size}>
+              <span>{size}</span>
+              <input
+                type="number"
+                min="0"
+                value={sizesMap[size] ?? ''}
+                onChange={(event) => handleSizeChange(size, event.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+
+        {hasSizes && (
+          <p className="size-grid-total">Total da grade: {sizesTotal} peças</p>
+        )}
+      </div>
 
       <label className="vectorization-checkbox">
         <input

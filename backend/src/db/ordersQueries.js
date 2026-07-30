@@ -1,4 +1,5 @@
 import { pool } from './pool.js'
+import { SIZES } from '../data/sizes.js'
 
 // Precisa espelhar src/data/orderStages.js e a lógica de
 // getNextStatus/getPreviousStatus do OrdersProvider.jsx do front-end —
@@ -62,6 +63,43 @@ export async function recalculateOrderTotal(db, orderId) {
   return toNumber(result.rows[0].total_value)
 }
 
+// Substitui a grade inteira do produto (apaga e regrava) — a tela manda o
+// conjunto final de tamanhos preenchidos, então essa é a operação real, não
+// adiciona/remove item a item. Mesma decisão de setUserOperations.
+export async function saveProductSizes(db, productId, sizes) {
+  await db.query('DELETE FROM product_sizes WHERE product_id = $1', [productId])
+
+  for (const { size, quantity } of sizes) {
+    await db.query(
+      'INSERT INTO product_sizes (product_id, size, quantity) VALUES ($1, $2, $3)',
+      [productId, size, quantity]
+    )
+  }
+}
+
+// products.quantity vira a SOMA da grade quando existe grade. Roda sempre na
+// mesma transação de gravar a grade — quantidade e grade divergirem seria
+// pior que qualquer uma das duas estar errada sozinha, porque o valor total
+// do pedido (unit_price * quantity) sai da quantidade, e ninguém saberia
+// qual dos dois números acreditar.
+//
+// Sem grade nenhuma, NÃO mexe na quantidade: os produtos que já existem (e
+// os que a vendedora preferir informar só o total) seguem com o número
+// digitado à mão. Devolve a quantidade final, seja ela derivada ou não.
+export async function recalculateProductQuantity(db, productId) {
+  const result = await db.query(
+    `UPDATE products p
+     SET quantity = COALESCE(
+       (SELECT SUM(quantity) FROM product_sizes WHERE product_id = p.id),
+       p.quantity
+     )
+     WHERE p.id = $1
+     RETURNING quantity`,
+    [productId]
+  )
+  return result.rows[0]?.quantity ?? null
+}
+
 function groupBy(rows, key) {
   return rows.reduce((acc, row) => {
     const groupKey = row[key]
@@ -92,7 +130,13 @@ export function mapFile(fileRow) {
   }
 }
 
-export function mapProduct(productRow, workflowRows = [], commentRows = [], fileRows = []) {
+export function mapProduct(
+  productRow,
+  workflowRows = [],
+  commentRows = [],
+  fileRows = [],
+  sizeRows = []
+) {
   return {
     id: productRow.id,
     orderId: productRow.order_id,
@@ -101,6 +145,10 @@ export function mapProduct(productRow, workflowRows = [], commentRows = [], file
     color: productRow.color,
     fabric: productRow.fabric,
     quantity: productRow.quantity,
+    // Grade de tamanhos (migration 0006). Já vem ordenada pela query; a
+    // ordem canônica (2 antes de 10, PP antes de EXG) mora em data/sizes.js,
+    // não no banco.
+    sizes: sizeRows.map((row) => ({ size: row.size, quantity: row.quantity })),
     observations: productRow.observations,
     designStatus: productRow.design_status,
     designIsRework: productRow.design_is_rework,
@@ -184,9 +232,22 @@ export async function fetchOrders(whereSql = '', params = []) {
       )
     : { rows: [] }
 
+  // ORDER BY pela posição no array de tamanhos: o banco não conhece a ordem
+  // canônica, então ela entra aqui como array literal (mesmo conteúdo de
+  // data/sizes.js). Sem isso a grade voltaria em ordem arbitrária.
+  const sizesResult = productIds.length
+    ? await pool.query(
+        `SELECT * FROM product_sizes
+          WHERE product_id = ANY($1::bigint[])
+          ORDER BY array_position($2::text[], size)`,
+        [productIds, SIZES]
+      )
+    : { rows: [] }
+
   const workflowByProduct = groupBy(workflowResult.rows, 'product_id')
   const commentsByProduct = groupBy(commentsResult.rows, 'product_id')
   const filesByProduct = groupBy(filesResult.rows, 'product_id')
+  const sizesByProduct = groupBy(sizesResult.rows, 'product_id')
   const productsByOrder = groupBy(products, 'order_id')
 
   return orders.map((order) =>
@@ -197,7 +258,8 @@ export async function fetchOrders(whereSql = '', params = []) {
           product,
           workflowByProduct[product.id] || [],
           commentsByProduct[product.id] || [],
-          filesByProduct[product.id] || []
+          filesByProduct[product.id] || [],
+          sizesByProduct[product.id] || []
         )
       )
     )
@@ -224,11 +286,17 @@ export async function getProductById(db, productId) {
     'SELECT * FROM product_files WHERE product_id = $1 ORDER BY created_at',
     [productId]
   )
+  const sizesResult = await db.query(
+    `SELECT * FROM product_sizes WHERE product_id = $1
+      ORDER BY array_position($2::text[], size)`,
+    [productId, SIZES]
+  )
 
   return mapProduct(
     productResult.rows[0],
     workflowResult.rows,
     commentsResult.rows,
-    filesResult.rows
+    filesResult.rows,
+    sizesResult.rows
   )
 }

@@ -18,6 +18,7 @@ const FIELD_LABELS = {
   color: 'cor',
   fabric: 'tecido',
   quantity: 'quantidade',
+  sizes: 'grade de tamanhos',
   observations: 'observações',
   unitPrice: 'valor unitário',
   needsVectorization: 'vetorização',
