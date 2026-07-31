@@ -12,6 +12,7 @@ import OrderDetails from './pages/OrderDetails'
 import Clients from './pages/Clients'
 import Production from './pages/Production'
 import Conference from './pages/Conference'
+import Delivered from './pages/Delivered'
 import Design from './pages/Design'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
@@ -42,6 +43,9 @@ function App() {
                   <Route path="/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
                   <Route path="/producao" element={<ProtectedRoute><Production /></ProtectedRoute>} />
                   <Route path="/conferencia" element={<ProtectedRoute><Conference /></ProtectedRoute>} />
+                  {/* Histórico de leitura, sem nenhum botão que altere algo —
+                      por isso segue a mesma regra de /pedidos e não tem action. */}
+                  <Route path="/entregues" element={<ProtectedRoute><Delivered /></ProtectedRoute>} />
                   <Route path="/relatorios" element={<ProtectedRoute action="reports.view"><Reports /></ProtectedRoute>} />
                   <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 </Routes>

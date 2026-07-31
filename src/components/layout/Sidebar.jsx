@@ -76,6 +76,19 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/entregues',
+    label: 'Entregues',
+    // Caixa de arquivo (tampa + corpo + puxador) — histórico guardado, o que
+    // a tela é. Distinta do cubo de Produção e da prancheta de Conferência.
+    icon: (
+      <>
+        <path d="M3 7h18v3.5H3z" />
+        <path d="M5 10.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-8.5" />
+        <path d="M10 14h4" />
+      </>
+    ),
+  },
+  {
     to: '/relatorios',
     label: 'Relatórios',
     action: 'reports.view',
