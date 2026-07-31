@@ -123,6 +123,19 @@
   text-decoration: underline;
 }
 
+/* Aviso de saldo em aberto, no modal de pagamento aberto pela retirada.
+   Tom de alerta (não de erro): falta receber, mas a entrega não está
+   proibida — quem está no caixa pode seguir mesmo assim. */
+.payment-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
 .payment-quick-buttons {
   display: flex;
   gap: 10px;

@@ -56,6 +56,16 @@ function OrderDetails() {
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [amountPaidDraft, setAmountPaidDraft] = useState(0)
+  /* Cobrança na retirada: o mesmo modal de pagamento, aberto pelo botão de
+     fechar o pedido em vez de pelo "Registrar Pagamento". Muda o texto e o
+     que acontece depois de salvar — quitou, o pedido fecha na sequência.
+
+     `pickupWarned` é o que faz o aviso ser aviso e não trava: ele avisa uma
+     vez por visita à tela; quem cancelar e clicar de novo entrega com saldo
+     em aberto (a Kavi fia para cliente conhecido, e travar deixaria a pessoa
+     sem saída a não ser lançar como pago o que não recebeu). */
+  const [chargingForPickup, setChargingForPickup] = useState(false)
+  const [pickupWarned, setPickupWarned] = useState(false)
 
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false)
   const [deadlineDraft, setDeadlineDraft] = useState('')
@@ -89,16 +99,43 @@ function OrderDetails() {
     if (updated) setIsEditOrderModalOpen(false)
   }
 
-  function openPaymentModal() {
+  function openPaymentModal(forPickup = false) {
     setAmountPaidDraft(order.amountPaid)
+    setChargingForPickup(forPickup)
     setIsPaymentModalOpen(true)
   }
 
+  function closePaymentModal() {
+    setIsPaymentModalOpen(false)
+    setChargingForPickup(false)
+  }
+
   async function confirmPayment() {
-    const updated = await updateOrderInfo(order.id, {
-      amountPaid: amountPaidDraft === '' ? 0 : Number(amountPaidDraft),
-    })
-    if (updated) setIsPaymentModalOpen(false)
+    const amountPaid = amountPaidDraft === '' ? 0 : Number(amountPaidDraft)
+    const updated = await updateOrderInfo(order.id, { amountPaid })
+    if (!updated) return
+
+    closePaymentModal()
+
+    // Quitou dentro do fluxo da retirada: fecha o pedido na sequência, para
+    // ninguém receber o dinheiro e esquecer o pedido aberto. Pagamento
+    // parcial não fecha nada — só registra o valor.
+    if (chargingForPickup && amountPaid >= order.totalValue) {
+      advanceOrderStage(order.id)
+    }
+  }
+
+  /* O botão de etapa. Na retirada existe o desvio da cobrança: é o último
+     momento em que o cliente está na loja, então o que falta receber tem que
+     aparecer antes de o pedido ser dado por encerrado. */
+  function handleAdvanceStage() {
+    if (order.stage === 'conferencia' && remaining > 0 && !pickupWarned) {
+      setPickupWarned(true)
+      openPaymentModal(true)
+      return
+    }
+
+    advanceOrderStage(order.id)
   }
 
   // Só abre um link wa.me pré-preenchido — envio continua manual, sem API
@@ -199,6 +236,9 @@ function OrderDetails() {
   )
   const conferencePending = conferenceSteps.some((stage) => stage.status !== 'done')
   const isDelivered = order.stage === 'entregue'
+  // Quanto falta receber. Nunca negativo: se o cliente pagou adiantado a
+  // mais, o que falta é zero, não um valor negativo na tela.
+  const remaining = Math.max(order.totalValue - order.amountPaid, 0)
 
   return (
     <Layout>
@@ -262,12 +302,15 @@ function OrderDetails() {
 
         <div>
           <span>Falta pagar</span>
-          <strong>{formatCurrency(Math.max(order.totalValue - order.amountPaid, 0))}</strong>
+          <strong>{formatCurrency(remaining)}</strong>
         </div>
 
         {canWrite && (
           <div>
-            <Button variant="secondary" onClick={openPaymentModal}>
+            {/* Seta () => : sem ela o React passaria o evento do clique como
+                primeiro argumento, e `forPickup` viraria truthy — o modal
+                abriria em modo cobrança fora da retirada. */}
+            <Button variant="secondary" onClick={() => openPaymentModal()}>
               Registrar Pagamento
             </Button>
           </div>
@@ -290,7 +333,7 @@ function OrderDetails() {
 
               <Button
                 variant="secondary"
-                onClick={() => advanceOrderStage(order.id)}
+                onClick={handleAdvanceStage}
                 disabled={
                   isDelivered ||
                   order.stage === 'producao' ||
@@ -456,9 +499,17 @@ function OrderDetails() {
 
       <Modal
         isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        title="Registrar Pagamento"
+        onClose={closePaymentModal}
+        title={chargingForPickup ? 'Falta pagar antes da retirada' : 'Registrar Pagamento'}
       >
+        {chargingForPickup && (
+          <p className="payment-warning">
+            Faltam <strong>{formatCurrency(remaining)}</strong> a receber deste
+            pedido. Registre o pagamento para fechar o pedido, ou cancele e clique
+            de novo em "Registrar retirada" para entregar com o saldo em aberto.
+          </p>
+        )}
+
         <PaymentFields
           totalValue={order.totalValue}
           amountPaid={amountPaidDraft}
@@ -466,7 +517,7 @@ function OrderDetails() {
         />
 
         <div className="modal-actions">
-          <Button variant="secondary" onClick={() => setIsPaymentModalOpen(false)}>
+          <Button variant="secondary" onClick={closePaymentModal}>
             Cancelar
           </Button>
           <Button onClick={confirmPayment}>Salvar</Button>
