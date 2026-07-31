@@ -88,6 +88,16 @@
   font-size: 13px;
 }
 
+/* Recorte da coluna, logo abaixo do título (hoje só na coluna "Concluído"
+   do design: "Últimos 7 dias"). Sobe junto do h2, por isso a margem
+   negativa — o h2 já tem a sua própria margem embaixo. */
+.kanban-column-hint {
+  margin-top: -8px;
+  margin-bottom: 12px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .rework-badge {
   display: inline-block;
   background: var(--color-warning-bg);

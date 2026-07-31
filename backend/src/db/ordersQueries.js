@@ -168,6 +168,7 @@ export function mapProduct(
     observations: productRow.observations,
     designStatus: productRow.design_status,
     designIsRework: productRow.design_is_rework,
+    designConcludedAt: productRow.design_concluded_at,
     // Derivado (itens 3.1 + ajuste de integração): needsDesignRework agora
     // significa "retrabalho ATIVO" — está na fila (qualquer status antes de
     // concluido) E entrou como retrabalho (design_is_rework). Produto em

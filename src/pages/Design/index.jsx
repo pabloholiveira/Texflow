@@ -8,7 +8,11 @@ import ProductFileUpload from '../../components/ui/ProductFileUpload'
 import { useOrders } from '../../context/ordersContext'
 import { useAuth } from '../../context/authContext'
 import { useProductFiles } from '../../hooks/useProductFiles'
-import { DESIGN_STATUSES } from '../../data/designStatuses'
+import {
+  DESIGN_STATUSES,
+  DESIGN_DONE_VISIBLE_DAYS,
+  isDesignCardVisible,
+} from '../../data/designStatuses'
 import { isActiveOrder } from '../../data/orderStages'
 
 // Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
@@ -54,7 +58,9 @@ function Design() {
     .filter(isActiveOrder)
     .flatMap((order) =>
       order.products
-        .filter((product) => product.designStatus)
+        // Concluído há mais de 7 dias sai da tela (não do banco) — sem isso
+        // a última coluna só perdia um card quando o pedido era entregue.
+        .filter((product) => product.designStatus && isDesignCardVisible(product))
         .map((product) => ({
           product,
           orderId: order.id,
@@ -98,6 +104,14 @@ function Design() {
           return (
             <div className="kanban-column" key={column.value}>
               <h2>{column.label}</h2>
+
+              {/* Sem esta linha, sumir com um card viraria mistério para quem
+                  está usando a tela. */}
+              {column.value === 'concluido' && (
+                <p className="kanban-column-hint">
+                  Últimos {DESIGN_DONE_VISIBLE_DAYS} dias
+                </p>
+              )}
 
               {items.length === 0 && (
                 <p className="kanban-empty">Nenhum produto aqui</p>

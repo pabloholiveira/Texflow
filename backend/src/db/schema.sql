@@ -83,6 +83,11 @@ CREATE TABLE IF NOT EXISTS products (
   -- orders.total_value junto com unit_price * quantity.
   needs_vectorization BOOLEAN NOT NULL DEFAULT false,
   vectorization_price NUMERIC(10, 2),
+  -- Quando o design foi concluído (migration 0011). Só serve para a coluna
+  -- "Concluído" do kanban de design parar de mostrar o card depois de 7 dias
+  -- — nada é apagado, design_status segue 'concluido'. NULL enquanto o
+  -- produto não estiver concluído (volta a NULL se alguém reabrir).
+  design_concluded_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

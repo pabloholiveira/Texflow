@@ -49,10 +49,17 @@ router.patch(
       const orderId = current.rows[0].order_id
 
       if (from !== status) {
-        await client.query('UPDATE products SET design_status = $1 WHERE id = $2', [
-          status,
-          req.params.id,
-        ])
+        // O carimbo anda junto do status, nunca em UPDATE separado: é ele
+        // que faz o card sumir da coluna "Concluído" 7 dias depois. Reabrir
+        // (sair de 'concluido') zera — senão o contador de uma conclusão
+        // antiga continuaria valendo para a conclusão seguinte.
+        await client.query(
+          `UPDATE products
+              SET design_status = $1,
+                  design_concluded_at = CASE WHEN $1 = 'concluido' THEN now() ELSE NULL END
+            WHERE id = $2`,
+          [status, req.params.id]
+        )
         await logEvent(client, {
           orderId,
           productId: req.params.id,
@@ -162,8 +169,15 @@ router.patch(
       if (value && (from === null || from === 'concluido')) newStatus = 'pendente'
       if (!value && from === 'pendente') newStatus = null
 
+      // Mesmo cuidado com o carimbo da rota acima: aqui newStatus só vira
+      // 'pendente' ou null, então na prática ele sempre limpa — o produto
+      // que volta para a fila por retrabalho deixa de estar concluído.
       await client.query(
-        'UPDATE products SET design_status = $1, design_is_rework = $2 WHERE id = $3',
+        `UPDATE products
+            SET design_status = $1,
+                design_is_rework = $2,
+                design_concluded_at = CASE WHEN $1 = 'concluido' THEN now() ELSE NULL END
+          WHERE id = $3`,
         [newStatus, value, req.params.id]
       )
 
