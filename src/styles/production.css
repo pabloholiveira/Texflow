@@ -235,3 +235,9 @@
     gap: 10px;
   }
 }
+
+/* Link "Imprimir ficha" dentro do modal de detalhe (Produção, Conferência
+   e Design), abaixo do painel do produto. */
+.sheet-link {
+  margin-top: 16px;
+}

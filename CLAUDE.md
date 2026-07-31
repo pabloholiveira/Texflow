@@ -446,6 +446,42 @@ São **três**, mais o GitHub — levantado das variáveis de ambiente e depend�
 
 Cogitou-se excluir referências e layouts do Cloudinary X dias após a entrega, para economizar espaço. **Decidido não fazer** — o risco (cliente voltar pedindo o mesmo design, ou reclamar de algo entregue e a Kavi não ter mais o arquivo de prova) supera o ganho, ainda mais sem saber se o uso real chega perto do limite do plano gratuito. **Não implementar regra automática de exclusão de arquivos.** Se um dia for necessário, é **ação manual, por pedido, decidida pelo Pablo** — nunca automática. Fica registrado só como possibilidade futura; não há nada construído nessa direção (não existe rota de delete de arquivo, ver o item de arquivos por produto no domain model).
 
+## Melhorias do uso diário: cliente visível, busca e ficha impressa (✅ 2026-07-31)
+
+Três itens levantados pelo Pablo usando o sistema, feitos na ordem 1 → 2 → 4 combinada com ele. **O item 3 da lista dele (visão financeira para admins: fluxo do mês, recebido vs. a receber) foi deliberadamente NÃO implementado** — ele pediu para registrar como o próximo grande item, com sessão própria de planejamento. Ao planejá-lo, note a tensão com a fronteira declarada no topo deste arquivo ("TexFlow não é sistema financeiro/fiscal").
+
+### 1. Nome do cliente junto ao número do pedido
+
+O pedido original dizia "nas listagens", mas **a lista de Pedidos já mostrava o cliente** (o `OrderCard`), assim como o Dashboard. O buraco real estava nas telas de chão de fábrica: cards de Produção/Conferência/Design mostravam só `PED-2026-0007`.
+
+- **`getClientNameById(clients, clientId)` em `src/data/clients.js`**: as três telas já etiquetavam `orderNumber` ao achatar os produtos; agora etiquetam `clientName` pelo mesmo caminho. Passa por `getClientDisplayName`, que segue sendo o único dono da regra empresa-vs-pessoa. **Nada de montar o nome no SQL** — mesma decisão já registrada no relatório de prazo, que devolve `clientId` cru.
+- **Bug real consertado junto**: a seção "Prontos para retirada" da Conferência lia `client?.personName` na mão, então **cliente empresa aparecia pelo nome da pessoa**, diferente do resto do sistema.
+- **Pedido e cliente foram para dentro do `ProductDetailPanel`, e o título do modal encurtou** para a identidade da peça (`Camiseta — Raglan`). Decisão do Pablo entre as duas opções: título com tipo + número + cliente estouraria no celular. **Os dois entram por prop, não lidos de dentro de `product`** — Produção/Conferência espalham no próprio produto, Design guarda num invólucro à parte; depender da convenção de uma quebraria calado nas outras.
+- A tabela de **Gargalos** (Relatórios) ganhou coluna Cliente: `GET /reports/bottlenecks` passou a devolver `clientId` (não o nome).
+
+### 2. Busca na aba Pedidos
+
+**`src/data/orderSearch.js` (novo)** — `matchesOrderSearch(order, query, clients)`, usada por `/pedidos` **e por `/entregues`** (uma busca que só acha pedido ativo frustra quem procura pedido antigo; é o mesmo componente).
+
+- **Campos**: número do pedido (casa por pedaço — "0007" acha "PED-2026-0007"), nome/empresa do cliente, CPF/CNPJ, e **tipo/modelo dos produtos** (decisão do Pablo) — é assim que o pedido é lembrado na prática ("o pedido dos bonés"). O último acha o pedido "por dentro", então buscar "polo" traz todo pedido que tenha uma polo; aceito de propósito, e a lista mostra o cliente ao lado.
+- **Normalização tira acento (NFD + faixa de combining marks) e pontuação**: "jose" acha "José", `98765432100` acha `987.654.321-00`. Sem isso a busca por CPF só funcionaria se a pessoa repetisse a máscara exata.
+- **Mensagem de lista vazia distingue "não achei o termo X" de "não há pedido nenhum"** — tratar as duas igual faria parecer que a lista está vazia.
+- Sem filtro no servidor: os pedidos já estão todos em memória (a limitação de paginação registrada acima).
+
+### 4. Ficha de produção impressa
+
+Rotas `/pedidos/:id/produtos/:productId/ficha` (uma peça) e `/pedidos/:id/fichas` (todas), **fora do `<Layout>`**, com `window.print()` automático (guardado por `useRef` — o cache de pedidos muda de referência e reabriria o diálogo).
+
+- **É por PRODUTO, e a razão é o modelo de domínio**: depois da aprovação cada produto segue seu próprio workflow (a camiseta na Costura enquanto o boné já está no Bordado), então é a peça que anda fisicamente separada. Uma folha por pedido acompanharia peças que não andam juntas. O botão "Imprimir fichas" em `OrderDetails` resolve o lado prático: N folhas em sequência, `break-after: page`, cada uma autônoma.
+- **`ProductSheet` é componente próprio, NÃO o `ProductDetailPanel` com `if (impressao)`**: o painel é feito para tela (link do Cloudinary, botão de upload, cores do tema) e papel é preto no branco com espaço para rubrica. Juntar os dois faria toda mudança em uma das visões arriscar a outra. O que se reaproveita são os ajudantes de dados.
+- **A ficha NÃO leva valores** (unitário, subtotal, vetorização) — decisão do Pablo: ela circula pela fábrica e pode ir à mão de costureira externa.
+- Leva: pedido, cliente, prazo, tipo/modelo/cor/tecido, quantidade, **grade de tamanhos como tabela** (tamanhos no cabeçalho, quantidades embaixo — é como a costureira lê), observações em destaque, se o layout aprovado está anexado, e as **etapas como checklist** com Data e Responsável em branco para preencher à caneta. As etapas já vêm na sequência real de produção (o backend ordena por `sequence_position`).
+- **`src/styles/print.css` (novo)** é o único arquivo do projeto em `mm`/`pt` e sem os tokens de cor — aqui o meio tem tamanho físico, e fundo colorido só gasta tinta de impressora de fábrica.
+- **`a.btn` em `buttons.css`**: os links de ficha abrem em outra aba, e o `.btn` foi escrito para `<button>` (que já vem `inline-block` e sem sublinhado).
+- **Dois defeitos que só apareceram OLHANDO a captura, não nas asserções**: a coluna "OK" do checklist ocupava um terço da folha (a regra genérica `.sheet-table th { width: 22% }` jogava toda a sobra na primeira coluna) e a coluna "Total" da grade ficava desproporcional. Os dois resolvidos com `table-layout: fixed` + larguras explícitas.
+
+**Verificação**: 25 checks de navegador para os itens 1 e 2 (os quatro quadros, o painel, a correção do nome de empresa, e a busca por número parcial/empresa/nome sem acento/CPF com e sem máscara/tipo/modelo) e 27 para a ficha (conteúdo, ausência de valores, uma folha por peça, quebra de página, `.no-print` sumindo em `@media print`, e os links chegando lá pelas telas). **Duas rodadas acusaram falhas que eram expectativa minha errada, não bug**: os pedidos antigos do banco local realmente têm produtos "Raglan" e "Boné" (conferido no banco), e a aba padrão da Conferência é Lavagem, que o produto de teste não tinha por ela ser opcional.
+
 ## Coluna "Concluído" do design com validade de 7 dias (✅ 2026-07-31)
 
 Fecha a nota adjacente deixada em aberto na seção "Pedido entregue sai da visão operacional": a coluna "Concluído" do kanban de `/design` só perdia um card quando o **pedido inteiro** era entregue (o filtro `isActiveOrder`), e como um pedido leva semanas até a retirada, ela virava um arquivo morto crescente. Agora o card some **7 dias depois da conclusão do design**. Migration `0011`.

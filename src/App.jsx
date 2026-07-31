@@ -18,6 +18,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import NewOrder from './pages/NewOrder'
+import PrintSheet from './pages/PrintSheet'
 
 function App() {
   return (
@@ -35,6 +36,11 @@ function App() {
                   <Route path="/pedidos" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                   <Route path="/pedidos/novo" element={<ProtectedRoute action="orders.write"><NewOrder /></ProtectedRoute>} />
                   <Route path="/pedidos/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+                  {/* Fichas de produção (item 4): fora do <Layout>, é o
+                      próprio PrintSheet que se desenha para papel. Sem
+                      `action`: quem enxerga a peça pode imprimi-la. */}
+                  <Route path="/pedidos/:id/fichas" element={<ProtectedRoute><PrintSheet /></ProtectedRoute>} />
+                  <Route path="/pedidos/:id/produtos/:productId/ficha" element={<ProtectedRoute><PrintSheet /></ProtectedRoute>} />
 
                   <Route path="/clientes" element={<ProtectedRoute action="clients.manage"><Clients /></ProtectedRoute>} />
                   {/* /design e /producao ficam abertas a todo mundo de propósito:

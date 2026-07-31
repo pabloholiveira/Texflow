@@ -19,7 +19,7 @@ function getOverallStatus(workflow) {
   return { key: 'pending', label: 'Não iniciado' }
 }
 
-function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, onOpenFiles }) {
+function ProductCard({ product, orderId, onRemove, onEdit, onEditInfo, onOpenComments, onOpenFiles }) {
   const overallStatus = getOverallStatus(product.workflow)
   // O card lê a permissão direto do contexto em vez de receber por prop: ele
   // é usado em três telas (NewOrder, OrderDetails e o modal de Produção), e
@@ -132,6 +132,22 @@ function ProductCard({ product, onRemove, onEdit, onEditInfo, onOpenComments, on
         <Button variant="secondary" onClick={() => onOpenFiles(product)}>
           Arquivos{product.files?.length > 0 ? ` (${product.files.length})` : ''}
         </Button>
+
+        {/* Âncora, e não o <Button>, porque abre em outra aba: a ficha é uma
+            página própria (fora do Layout) e quem imprime não quer perder o
+            pedido que estava olhando. Só aparece com orderId — o NewOrder
+            não passa, e imprimir ficha de pedido ainda em rascunho não faz
+            sentido. */}
+        {orderId && (
+          <a
+            className="btn btn-secondary"
+            href={`/pedidos/${orderId}/produtos/${product.id}/ficha`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Imprimir ficha
+          </a>
+        )}
 
         {canWrite && (
           <Button variant="danger" onClick={() => onRemove(product.id)}>

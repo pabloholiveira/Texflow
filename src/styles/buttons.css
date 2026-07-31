@@ -23,6 +23,15 @@
   color: var(--color-primary);
 }
 
+/* Âncora que se comporta como botão — usada onde o clique abre outra aba
+   (as fichas de produção). O .btn foi escrito para <button>, que já vem
+   inline-block e sem sublinhado; um <a> precisa dos dois na mão. */
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+  line-height: 1.25;
+}
+
 .btn-secondary:hover {
   background: #d5dfec;
 }

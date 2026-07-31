@@ -10,6 +10,7 @@ import { useSettings } from '../../context/settingsContext'
 import { useAuth } from '../../context/authContext'
 import { buildWhatsAppMessage, buildWhatsAppLink } from '../../utils/whatsapp'
 import { isInWorkflow } from '../../data/orderStages'
+import { getClientDisplayName, getClientNameById } from '../../data/clients'
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pendente' },
@@ -28,6 +29,12 @@ function getStatusLabel(status) {
 // colunas de status): é o mesmo gesto, sobre a mesma tabela
 // (product_workflow_steps), só que filtrado por operations.phase. Quem já
 // sabe usar Produção sabe usar isto.
+// Identidade da peça no título do modal — pedido e cliente moram dentro
+// do painel de detalhe.
+function nomeDoProduto(product) {
+  return product.model ? `${product.type} — ${product.model}` : product.type
+}
+
 function Conference() {
   const { orders, moveProductStepStatus } = useOrders()
   const { operationsData } = useOperations()
@@ -53,6 +60,7 @@ function Conference() {
       ...product,
       orderId: order.id,
       orderNumber: order.orderNumber,
+      clientName: getClientNameById(clients, order.clientId),
     }))
   )
 
@@ -116,7 +124,10 @@ function Conference() {
               <div className="ready-order" key={order.id}>
                 <div>
                   <strong>{order.orderNumber}</strong>
-                  <span>{client?.personName || 'Cliente não informado'}</span>
+                  {/* getClientDisplayName e não client.personName: cliente
+                      empresa aparece pelo nome da empresa, como no resto do
+                      sistema. */}
+                  <span>{getClientDisplayName(client)}</span>
                 </div>
 
                 {canOperate && (
@@ -169,7 +180,9 @@ function Conference() {
                     {item.product.type} — {item.product.model}
                   </button>
 
-                  <p>{item.product.orderNumber}</p>
+                  <p>
+                    {item.product.orderNumber} — {item.product.clientName}
+                  </p>
 
                   <p className="kanban-card-meta">
                     {[item.product.color, `${item.product.quantity} peças`]
@@ -222,11 +235,24 @@ function Conference() {
       <Modal
         isOpen={!!detailProduct}
         onClose={() => setDetailTarget(null)}
-        title={detailProduct ? `${detailProduct.type} — ${detailProduct.orderNumber}` : ''}
+        title={detailProduct ? nomeDoProduto(detailProduct) : ''}
       >
         {detailProduct && (
           <>
-            <ProductDetailPanel product={detailProduct} />
+            <ProductDetailPanel
+              product={detailProduct}
+              orderNumber={detailProduct.orderNumber}
+              clientName={detailProduct.clientName}
+            />
+
+            <a
+              className="btn btn-secondary sheet-link"
+              href={`/pedidos/${detailProduct.orderId}/produtos/${detailProduct.id}/ficha`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Imprimir ficha
+            </a>
 
             <div className="product-detail-workflow">
               {detailProduct.workflow

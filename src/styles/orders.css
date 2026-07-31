@@ -4,6 +4,14 @@
   gap: 10px;
 }
 
+/* Campo de busca acima da lista (Pedidos e Entregues). Largura limitada:
+   um input esticado por 1400px de tela pareceria um campo de formulário,
+   não uma busca. No celular ocupa a largura toda. */
+.orders-search {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+
 .orders-list {
   display: flex;
   flex-direction: column;

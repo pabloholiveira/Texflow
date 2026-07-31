@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Layout from '../../components/layout/Layout'
 import { reportsApi } from '../../services/api'
 import { useClients } from '../../context/clientsContext'
-import { getClientDisplayName } from '../../data/clients'
+import { getClientDisplayName, getClientNameById } from '../../data/clients'
 
 // toFixed/template literal produzem "20.8"; em português é "20,8". Passa
 // pelo toLocaleString('pt-BR') em vez de trocar o ponto na mão.
@@ -257,6 +257,7 @@ function Reports() {
                   <thead>
                     <tr>
                       <th>Pedido</th>
+                      <th>Cliente</th>
                       <th>Produto</th>
                       <th>Operação</th>
                       <th>Status</th>
@@ -267,6 +268,7 @@ function Reports() {
                     {bottlenecks.stuckProducts.map((row, index) => (
                       <tr key={`${row.orderNumber}-${row.step}-${index}`}>
                         <td>{row.orderNumber}</td>
+                        <td>{getClientNameById(clients, row.clientId)}</td>
                         <td>{row.productType}</td>
                         <td>{row.step}</td>
                         <td>{STATUS_LABELS[row.status] || row.status}</td>

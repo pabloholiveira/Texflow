@@ -6,6 +6,7 @@ import Modal from '../../components/ui/Modal'
 import ProductDetailPanel from '../../components/ui/ProductDetailPanel'
 import ProductFileUpload from '../../components/ui/ProductFileUpload'
 import { useOrders } from '../../context/ordersContext'
+import { useClients } from '../../context/clientsContext'
 import { useAuth } from '../../context/authContext'
 import { useProductFiles } from '../../hooks/useProductFiles'
 import {
@@ -14,6 +15,7 @@ import {
   isDesignCardVisible,
 } from '../../data/designStatuses'
 import { isActiveOrder } from '../../data/orderStages'
+import { getClientNameById } from '../../data/clients'
 
 // Fila de design por PRODUTO (item 3.1 do roadmap — ver CLAUDE.md). Dois
 // caminhos de entrada: automático (pedido sai de Venda → todos os produtos
@@ -26,8 +28,16 @@ import { isActiveOrder } from '../../data/orderStages'
 // igual Produção — não existe um GET /design-queue dedicado de propósito:
 // os pedidos já estão no front, criar outro endpoint seria uma segunda
 // fonte de verdade sem necessidade.
+
+// Identidade da peça no título do modal — pedido e cliente moram dentro
+// do painel de detalhe.
+function nomeDoProduto(product) {
+  return product.model ? `${product.type} — ${product.model}` : product.type
+}
+
 function Design() {
   const { orders, setProductDesignStatus } = useOrders()
+  const { clients } = useClients()
   // Quem não é do design (ou admin) enxerga a fila mas não move card — a
   // matriz é "leitura ampla, escrita por setor". Gate num lugar só, em volta
   // do bloco inteiro de ações, em vez de repetir a condição nos quatro
@@ -65,6 +75,7 @@ function Design() {
           product,
           orderId: order.id,
           orderNumber: order.orderNumber,
+          clientName: getClientNameById(clients, order.clientId),
         }))
     )
 
@@ -138,6 +149,7 @@ function Design() {
                     >
                       {item.orderNumber}
                     </Link>
+                    {` — ${item.clientName}`}
                     {item.product.color ? ` • ${item.product.color}` : ''}
                     {item.product.quantity ? ` • ${item.product.quantity} peças` : ''}
                   </p>
@@ -226,13 +238,26 @@ function Design() {
         onClose={() => setDetailTarget(null)}
         title={
           detail
-            ? `${detail.product.type} — ${detail.orderNumber}`
+            ? nomeDoProduto(detail.product)
             : 'Produto'
         }
       >
         {detail && (
           <>
-            <ProductDetailPanel product={detail.product} />
+            <ProductDetailPanel
+              product={detail.product}
+              orderNumber={detail.orderNumber}
+              clientName={detail.clientName}
+            />
+
+            <a
+              className="btn btn-secondary sheet-link"
+              href={`/pedidos/${detail.orderId}/produtos/${detail.product.id}/ficha`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Imprimir ficha
+            </a>
 
             {canMove && (
               <div className="design-upload">

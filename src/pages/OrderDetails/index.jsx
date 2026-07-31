@@ -255,6 +255,18 @@ function OrderDetails() {
                 Enviar por WhatsApp
               </Button>
             )}
+            {/* Uma folha por peça, todas de uma vez: é o gesto de quem
+                acabou de fechar o pedido e vai levar tudo para a fábrica. */}
+            {products.length > 0 && (
+              <a
+                className="btn btn-secondary"
+                href={`/pedidos/${order.id}/fichas`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Imprimir fichas
+              </a>
+            )}
             <Button variant="secondary" onClick={openEditOrderModal}>
               Editar Pedido
             </Button>
@@ -395,6 +407,7 @@ function OrderDetails() {
           <ProductCard
             key={item.id}
             product={item}
+            orderId={order.id}
             onRemove={removeProduct}
             onEdit={openEditModal}
             onEditInfo={openInfoModal}

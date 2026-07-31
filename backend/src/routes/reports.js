@@ -92,6 +92,9 @@ router.get(
         pws.step_name,
         pws.status,
         o.order_number,
+        -- clientId cru pelo mesmo motivo do relatório de prazo abaixo:
+        -- getClientDisplayName é o único dono da regra empresa-vs-pessoa.
+        o.client_id,
         p.type AS product_type,
         COALESCE(last_event.changed_at, pws.created_at) AS since
       FROM product_workflow_steps pws
@@ -114,6 +117,7 @@ router.get(
         step: row.step_name,
         status: row.status,
         orderNumber: row.order_number,
+        clientId: row.client_id,
         productType: row.product_type,
         since: row.since,
       })),

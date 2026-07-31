@@ -5,10 +5,18 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import ProductDetailPanel from '../../components/ui/ProductDetailPanel'
 import { useOrders } from '../../context/ordersContext'
+import { useClients } from '../../context/clientsContext'
 import { useOperations } from '../../context/operationsContext'
 import { useAuth } from '../../context/authContext'
 import { formatSizes } from '../../data/sizes'
+import { getClientNameById } from '../../data/clients'
 import { isInWorkflow } from '../../data/orderStages'
+
+// Identidade da peça no título do modal — sem número de pedido nem nome
+// de cliente, que agora moram dentro do painel.
+function nomeDoProduto(product) {
+  return product.model ? `${product.type} — ${product.model}` : product.type
+}
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pendente' },
@@ -27,6 +35,7 @@ function Production() {
   // saíram daqui (item 2) e viraram a aba Conferência, operada pela
   // vendedora. O filtro lê operations.phase, não uma lista de nomes.
   const { operationsData } = useOperations()
+  const { clients } = useClients()
   const operations = operationsData
     .filter((operation) => operation.phase === 'producao')
     .map((operation) => operation.name)
@@ -60,6 +69,9 @@ function Production() {
         ...product,
         orderId: order.id,
         orderNumber: order.orderNumber,
+        // Sem o nome aqui, o card só diz "PED-2026-0007" e quem está na
+        // máquina não sabe de quem é a peça sem abrir nada.
+        clientName: getClientNameById(clients, order.clientId),
       }))
     )
 
@@ -140,7 +152,9 @@ function Production() {
                     {item.product.type} — {item.product.model}
                   </button>
 
-                  <p>{item.product.orderNumber}</p>
+                  <p>
+                    {item.product.orderNumber} — {item.product.clientName}
+                  </p>
 
                   {/* Item 4: o card mostra o essencial da peça sem precisar
                       abrir nada — cor, tecido e quantidade são o que a pessoa
@@ -211,18 +225,28 @@ function Production() {
       <Modal
         isOpen={!!detailProduct}
         onClose={closeDetail}
-        title={
-          detailProduct
-            ? `${detailProduct.type} — ${detailProduct.orderNumber}`
-            : ''
-        }
+        // Título curto: pedido e cliente aparecem dentro do painel.
+        title={detailProduct ? nomeDoProduto(detailProduct) : ''}
       >
         {detailProduct && (
           <>
             {/* Mesmo painel da tela de Design (item 5) — dados da peça,
                 grade de tamanhos, observações e os arquivos, incluindo o
                 layout aprovado que bordado/silk/costura precisam consultar. */}
-            <ProductDetailPanel product={detailProduct} />
+            <ProductDetailPanel
+              product={detailProduct}
+              orderNumber={detailProduct.orderNumber}
+              clientName={detailProduct.clientName}
+            />
+
+            <a
+              className="btn btn-secondary sheet-link"
+              href={`/pedidos/${detailProduct.orderId}/produtos/${detailProduct.id}/ficha`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Imprimir ficha
+            </a>
 
             <div className="product-detail-workflow">
               {detailProduct.workflow.map((stage) => (
