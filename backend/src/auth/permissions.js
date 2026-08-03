@@ -5,13 +5,23 @@
 // não pode fazer. Quem de fato barra é sempre este lado — mesmo motivo pelo
 // qual ORDER_STAGES é duplicado entre os dois processos (Node separado, sem
 // import compartilhado): se mudar aqui, mude lá também.
-export const ROLES = ['admin', 'vendedora', 'design', 'producao']
+export const ROLES = ['admin', 'vendedora', 'design', 'producao', 'gerente']
 
 // 'design' acumula tudo de 'vendedora' e soma o que é dele (mover card no
 // kanban de design) — por isso aparece nos dois grupos abaixo, e não em um
 // grupo isolado. Na prática 'design' só não tem: Configurações e mover etapa
 // de produção.
-export const SALES_ROLES = ['admin', 'vendedora', 'design']
+//
+// 'gerente' acumula pela mesma lógica, mas do outro lado: tudo da vendedora
+// MAIS a produção inteira. Ele fica a um passo do admin de propósito — não
+// entra em ADMIN_ONLY (Configurações) nem entrará na futura aba financeira.
+export const SALES_ROLES = ['admin', 'vendedora', 'design', 'gerente']
 export const DESIGN_ROLES = ['admin', 'design']
-export const PRODUCTION_ROLES = ['admin', 'producao']
+export const PRODUCTION_ROLES = ['admin', 'producao', 'gerente']
 export const ADMIN_ONLY = ['admin']
+
+// Papéis que operam QUALQUER etapa, sem passar pela atribuição individual da
+// tabela user_operations. O gerente entra aqui porque o sentido dele é cobrir
+// quem faltou — pré-atribuir etapa por etapa anularia isso. Quem é 'producao'
+// continua limitado ao que foi atribuído.
+export const ALL_STEPS_ROLES = ['admin', 'gerente']

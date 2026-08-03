@@ -14,7 +14,7 @@ import {
 } from '../db/ordersQueries.js'
 import { normalizeSizes } from '../data/sizes.js'
 import { logEvent } from '../db/eventsQueries.js'
-import { canOperateStep } from '../db/usersQueries.js'
+import { canOperateStep, hasStepAssigned } from '../db/usersQueries.js'
 import { requireRole } from '../middleware/requireRole.js'
 import { SALES_ROLES, DESIGN_ROLES, PRODUCTION_ROLES } from '../auth/permissions.js'
 
@@ -422,15 +422,23 @@ router.patch(
           error: `A etapa "${step}" é da Conferência, feita pela vendedora`,
         })
       }
-    } else {
-      if (!PRODUCTION_ROLES.includes(req.user.role)) {
-        return res.status(403).json({
-          error: 'Seu perfil não tem permissão para esta ação',
-        })
-      }
+    } else if (PRODUCTION_ROLES.includes(req.user.role)) {
       if (!(await canOperateStep(req.user, step))) {
         return res.status(403).json({
           error: `Você não tem permissão para operar a etapa "${step}"`,
+        })
+      }
+    } else {
+      // Fora da produção, mas a etapa pode ter sido atribuída nominalmente a
+      // esta pessoa — é o caso de "Botão" na Kavi, produção de verdade que a
+      // venda também opera. Sem isto, a vendedora morria no teste de papel e
+      // nunca chegava na atribuição que ela de fato tem.
+      //
+      // Checagem estrita de propósito (hasStepAssigned, não canOperateStep):
+      // quem não é da produção não herda a isenção de etapa fora do catálogo.
+      if (!(await hasStepAssigned(req.user, step))) {
+        return res.status(403).json({
+          error: 'Seu perfil não tem permissão para esta ação',
         })
       }
     }

@@ -255,6 +255,28 @@
   color: var(--color-primary);
   font-weight: 600;
   word-break: break-all;
+  /* Empurra "por fulano" e o Excluir para a direita. Com o space-between
+     sozinho, três filhos ficariam espalhados pela linha inteira. */
+  margin-right: auto;
+}
+
+/* Botão discreto de propósito: fica ao lado de todo arquivo da lista, então
+   com cara de botão vermelho cheio ele dominaria o bloco. A cor de perigo só
+   aparece no hover e no botão de confirmar dentro do modal. */
+.product-file-delete {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.product-file-delete:hover {
+  color: var(--color-danger);
+  background: none;
 }
 
 .product-files-group li span {

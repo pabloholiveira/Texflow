@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AuthContext } from './authContext'
 import { authApi, usersApi } from '../services/api'
-import { can as canDo } from '../data/permissions'
+import { can as canDo, ALL_STEPS_ROLES } from '../data/permissions'
 
 // Token e usuário ficam também no localStorage (não só em useState) pra
 // sobreviver a um F5 — sem isso, todo reload jogaria de volta pro /login
@@ -18,9 +18,11 @@ export function AuthProvider({ children }) {
   const [allowedSteps, setAllowedSteps] = useState([])
 
   useEffect(() => {
-    // Só quem é 'producao' tem lista: admin passa por tudo e os outros papéis
-    // não movem etapa nenhuma, então nem vale a requisição.
-    if (!token || user?.role !== 'producao') return
+    // Vale para qualquer papel, não só 'producao': uma etapa de produção pode
+    // ser atribuída a uma vendedora (ex.: "Botão" na Kavi), e sem a lista os
+    // botões dela ficariam escondidos. Só admin e gerente ficam de fora — eles
+    // passam por tudo, então a requisição seria desperdício.
+    if (!token || !user || ALL_STEPS_ROLES.includes(user.role)) return
 
     usersApi
       .operations(user.id)
@@ -57,13 +59,20 @@ export function AuthProvider({ children }) {
   }
 
   // Espelha canOperateStep do backend (usersQueries.js), inclusive as duas
-  // isenções: admin passa por tudo, e etapa fora do catálogo ("outra
-  // operação", digitada à mão na venda) é livre pra qualquer um da produção.
-  // `catalog` vem de useOperations() na tela que chama — este contexto não
-  // conhece o catálogo de operações.
+  // isenções: admin e gerente passam por tudo, e etapa fora do catálogo
+  // ("outra operação", digitada à mão na venda) é livre pra qualquer um da
+  // produção. `catalog` vem de useOperations() na tela que chama — este
+  // contexto não conhece o catálogo de operações.
   function canOperateStep(step, catalog = []) {
-    if (!canDo(user, 'production.move')) return false
-    if (user.role === 'admin') return true
+    if (!user) return false
+    if (ALL_STEPS_ROLES.includes(user.role)) return true
+
+    // Fora da produção só passa a etapa atribuída nominalmente (ex.: "Botão"
+    // liberado para uma vendedora) — e sem a isenção de etapa fora do
+    // catálogo, que é só de quem é da produção. Espelha o else final do
+    // PATCH /products/:id/workflow/:step.
+    if (!canDo(user, 'production.move')) return allowedSteps.includes(step)
+
     if (!catalog.includes(step)) return true
     return allowedSteps.includes(step)
   }

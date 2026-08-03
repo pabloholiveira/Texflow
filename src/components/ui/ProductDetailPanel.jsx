@@ -28,7 +28,11 @@ function Field({ label, value }) {
 // telas etiquetam isso de formas diferentes (Produção e Conferência
 // espalham no próprio produto; Design guarda num invólucro à parte) —
 // depender da convenção de uma delas quebraria calado nas outras.
-function ProductDetailPanel({ product, orderNumber, clientName }) {
+// `orderId` só é passado por quem GERENCIA arquivo (a tela de Design, que é
+// onde o layout aprovado é enviado) — é ele que liga o botão de excluir na
+// lista. Produção e Conferência não passam: ali a peça é executada e
+// conferida, não é onde se administra anexo.
+function ProductDetailPanel({ product, orderNumber, clientName, orderId }) {
   return (
     <div className="product-detail-panel">
       <div className="product-detail-fields">
@@ -65,6 +69,8 @@ function ProductDetailPanel({ product, orderNumber, clientName }) {
         <ProductFileList
           files={product.files}
           emptyLabel="Nenhum arquivo anexado a este produto."
+          orderId={orderId}
+          productId={product.id}
         />
       </div>
     </div>

@@ -92,6 +92,8 @@ export const commentsApi = {
 export const filesApi = {
   create: (productId, formData) =>
     request(`/products/${productId}/files`, { method: 'POST', body: formData }),
+  remove: (productId, fileId) =>
+    request(`/products/${productId}/files/${fileId}`, { method: 'DELETE' }),
 }
 
 export const clientsApi = {

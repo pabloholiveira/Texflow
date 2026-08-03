@@ -54,6 +54,20 @@
   margin-top: 24px;
 }
 
+/* Modal de confirmação: a pergunta em destaque, a consequência abaixo em tom
+   menor. O nome do que será apagado vai dentro da pergunta — é ele que evita
+   apagar o item errado. */
+.confirm-text {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.confirm-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
 @media (max-width: 640px) {
   /* `flex-start` porque o modal do wizard de produto é alto: centralizado,
      ele ficaria colado nas duas bordas e sem folga pra rolar. */

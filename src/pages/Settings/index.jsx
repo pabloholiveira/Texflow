@@ -9,7 +9,7 @@ import { useSettings } from '../../context/settingsContext'
 import { useAuth } from '../../context/authContext'
 import { usersApi } from '../../services/api'
 import { WHATSAPP_PLACEHOLDERS } from '../../utils/whatsapp'
-import { ROLES, ROLE_LABELS } from '../../data/permissions'
+import { ROLES, ROLE_LABELS, ALL_STEPS_ROLES } from '../../data/permissions'
 
 const emptyOwnPasswordDraft = {
   currentPassword: '',
@@ -458,8 +458,11 @@ function Settings() {
           <p>
             O papel define o que cada pessoa enxerga e pode fazer. Quem é de
             Produção opera só as etapas atribuídas em "Etapas" — sem nenhuma
-            marcada, não move etapa nenhuma. Trocar o papel de alguém só vale a
-            partir do próximo login dessa pessoa.
+            marcada, não move etapa nenhuma. Quem não é de Produção também pode
+            receber uma etapa avulsa ali, e passa a operar só aquela.
+            Administrador e Gerente operam todas, sem precisar de atribuição.
+            Trocar o papel de alguém só vale a partir do próximo login dessa
+            pessoa.
           </p>
 
           <div className="operations-settings-list">
@@ -490,7 +493,11 @@ function Settings() {
                     ))}
                   </select>
 
-                  {item.role === 'producao' && (
+                  {/* Não é mais só quem é 'producao': uma etapa de produção
+                      pode ser atribuída a uma vendedora (ex.: "Botão"). Fora
+                      ficam admin e gerente, que operam tudo — atribuir etapa
+                      a eles não mudaria nada. */}
+                  {!ALL_STEPS_ROLES.includes(item.role) && (
                     <Button
                       variant="secondary"
                       onClick={() => openStepsModal(item)}
@@ -557,7 +564,8 @@ function Settings() {
         <p>
           Marque as etapas que esta pessoa pode iniciar, concluir ou voltar na
           tela de Produção. Etapas digitadas à mão na venda ("outra operação")
-          ficam liberadas para qualquer pessoa da produção.
+          ficam liberadas para qualquer pessoa da produção — quem é de outro
+          papel opera exatamente o que estiver marcado aqui, e nada além.
         </p>
 
         <div className="operations-checklist">

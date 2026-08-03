@@ -158,6 +158,7 @@ function OrderDetails() {
     goToOperationsStep,
     goToInfoStep,
     saveNewProduct,
+    isSavingProduct,
     referenceFiles,
     addReferenceFile,
     removeReferenceFile,
@@ -472,10 +473,16 @@ function OrderDetails() {
             />
 
             <div className="modal-actions">
-              <Button variant="secondary" onClick={goToInfoStep}>
+              <Button
+                variant="secondary"
+                onClick={goToInfoStep}
+                disabled={isSavingProduct}
+              >
                 Voltar
               </Button>
-              <Button onClick={saveNewProduct}>Salvar</Button>
+              <Button onClick={saveNewProduct} disabled={isSavingProduct}>
+                {isSavingProduct ? 'Salvando...' : 'Salvar'}
+              </Button>
             </div>
           </>
         )}
@@ -629,7 +636,11 @@ function OrderDetails() {
         onClose={closeFilesModal}
         title={filesProduct ? `Arquivos — ${filesProduct.type}` : 'Arquivos'}
       >
-        <ProductFileList files={filesProduct?.files || []} />
+        <ProductFileList
+          files={filesProduct?.files || []}
+          orderId={order.id}
+          productId={filesProduct?.id}
+        />
 
         <ProductFileUpload
           fileDraft={fileDraft}

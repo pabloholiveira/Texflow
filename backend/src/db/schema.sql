@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'admin'
-    CHECK (role IN ('admin', 'vendedora', 'design', 'producao')),
+    CHECK (role IN ('admin', 'vendedora', 'design', 'producao', 'gerente')),
   -- Item 1.2 do roadmap (CLAUDE.md): DELETE /users/:id nunca apaga a linha
   -- de verdade (soft delete) — só marca is_active = false. Login (POST
   -- /auth/login) passa a rejeitar um usuário inativo com a mesma mensagem

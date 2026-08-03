@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useOrders } from '../context/ordersContext'
 import { useAuth } from '../context/authContext'
 import { sizesToList, sizesToMap, sumSizes } from '../data/sizes'
@@ -44,6 +44,17 @@ export function useProductList(orderId) {
   // verdade (ver saveNewProduct), já que não dá pra anexar arquivo a um
   // product_id que ainda não foi criado.
   const [referenceFiles, setReferenceFiles] = useState([])
+
+  // Salvar um produto espera o servidor de propósito (o produto precisa ter um
+  // id real antes de qualquer arquivo ser anexado), e isso leva de 1 a vários
+  // segundos. Sem sinal na tela a pessoa acha que travou e clica de novo —
+  // criando dois produtos. Daí o par estado + ref:
+  //   - o estado é o que a tela lê (botão desabilitado, texto "Salvando...");
+  //   - o ref é a trava de verdade. Dois cliques no mesmo tick leriam o estado
+  //     ainda como `false` (o React só re-renderiza depois), enquanto o ref
+  //     muda na hora. Mesma razão do hasCreatedOrder em NewOrder.
+  const [isSavingProduct, setIsSavingProduct] = useState(false)
+  const savingProductRef = useRef(false)
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingProductId, setEditingProductId] = useState(null)
@@ -100,7 +111,12 @@ export function useProductList(orderId) {
     setReferenceFiles((current) => current.filter((_, i) => i !== index))
   }
 
+  // Ignora o fechamento enquanto salva. O Modal chama isto pelo X, pelo Esc e
+  // pelo clique no fundo — barrar aqui cobre os três de uma vez, em vez de
+  // tratar cada um. Fechar no meio faria parecer que a gravação foi cancelada,
+  // quando na verdade ela seguiria até o fim no servidor.
   function closeAddModal() {
+    if (savingProductRef.current) return
     setIsAddModalOpen(false)
   }
 
@@ -120,29 +136,50 @@ export function useProductList(orderId) {
   }
 
   async function saveNewProduct() {
-    const created = await addProductToOrder(orderId, {
-      ...product,
-      // String vazia não é um NUMERIC válido pro Postgres — vira null
-      // (mesmo tratamento do "Editar Dados", ver saveInfoEdit).
-      unitPrice: product.unitPrice === '' ? null : Number(product.unitPrice),
-      vectorizationPrice:
-        product.vectorizationPrice === '' ? null : Number(product.vectorizationPrice),
-      sizes: sizesToList(product.sizes),
-      operations: selectedSteps,
-    })
+    if (savingProductRef.current) return
+    savingProductRef.current = true
+    setIsSavingProduct(true)
 
-    if (!created) return
+    try {
+      const created = await addProductToOrder(orderId, {
+        ...product,
+        // String vazia não é um NUMERIC válido pro Postgres — vira null
+        // (mesmo tratamento do "Editar Dados", ver saveInfoEdit).
+        unitPrice: product.unitPrice === '' ? null : Number(product.unitPrice),
+        vectorizationPrice:
+          product.vectorizationPrice === '' ? null : Number(product.vectorizationPrice),
+        sizes: sizesToList(product.sizes),
+        operations: selectedSteps,
+      })
 
-    // Só depois do produto existir de verdade (tem um id real) é que dá pra
-    // subir as referências escolhidas durante o cadastro.
-    for (const file of referenceFiles) {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('category', 'referencia')
-      await addProductFile(orderId, created.id, formData)
+      // O `return` aqui ainda passa pelo finally (que libera a trava), mas
+      // não fecha o modal — que é o certo quando a gravação falhou: o que foi
+      // digitado continua na tela.
+      if (!created) return
+
+      // Só depois do produto existir de verdade (tem um id real) é que dá pra
+      // subir as referências escolhidas durante o cadastro.
+      //
+      // Em paralelo, não uma esperando a outra: cada upload é uma ida ao
+      // Cloudinary, então em série o tempo era a SOMA de todas. Com Promise.all
+      // passa a ser o da mais lenta.
+      await Promise.all(
+        referenceFiles.map((file) => {
+          const formData = new FormData()
+          formData.append('file', file)
+          formData.append('category', 'referencia')
+          return addProductFile(orderId, created.id, formData)
+        })
+      )
+
+      // Fecha direto, sem passar pelo closeAddModal: o guard de lá existe pra
+      // barrar o fechamento iniciado pela PESSOA (X, Esc, clique no fundo)
+      // durante a gravação — este aqui é o fechamento do próprio sucesso.
+      setIsAddModalOpen(false)
+    } finally {
+      savingProductRef.current = false
+      setIsSavingProduct(false)
     }
-
-    closeAddModal()
   }
 
   function removeProduct(productId) {
@@ -283,6 +320,7 @@ export function useProductList(orderId) {
     goToOperationsStep,
     goToInfoStep,
     saveNewProduct,
+    isSavingProduct,
     referenceFiles,
     addReferenceFile,
     removeReferenceFile,

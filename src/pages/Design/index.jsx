@@ -248,6 +248,7 @@ function Design() {
               product={detail.product}
               orderNumber={detail.orderNumber}
               clientName={detail.clientName}
+              orderId={detail.orderId}
             />
 
             <a

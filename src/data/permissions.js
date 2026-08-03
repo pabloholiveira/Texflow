@@ -6,10 +6,18 @@
 //
 // 'design' acumula tudo de 'vendedora' e soma o que é dele (mover card no
 // kanban de design) — por isso aparece nos mesmos grupos, não em um isolado.
-const SALES_ROLES = ['admin', 'vendedora', 'design']
+//
+// 'gerente' acumula pela mesma lógica, do outro lado: tudo da vendedora MAIS
+// a produção inteira. Fica a um passo do admin de propósito — sem
+// Configurações, e fora da futura aba financeira.
+const SALES_ROLES = ['admin', 'vendedora', 'design', 'gerente']
 const DESIGN_ROLES = ['admin', 'design']
-const PRODUCTION_ROLES = ['admin', 'producao']
+const PRODUCTION_ROLES = ['admin', 'producao', 'gerente']
 const ADMIN_ONLY = ['admin']
+
+// Papéis que operam qualquer etapa, sem passar pela atribuição individual
+// (user_operations). Espelha ALL_STEPS_ROLES do backend.
+export const ALL_STEPS_ROLES = ['admin', 'gerente']
 
 // Ação -> papéis que podem. Chaves com nome de ação (e não de tela) porque a
 // mesma permissão governa vários lugares: 'orders.write' esconde o botão
@@ -37,6 +45,7 @@ export const ROLE_LABELS = {
   vendedora: 'Vendedora',
   design: 'Design',
   producao: 'Produção',
+  gerente: 'Gerente',
 }
 
 export const ROLES = Object.keys(ROLE_LABELS)

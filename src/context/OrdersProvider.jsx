@@ -270,6 +270,30 @@ export function OrdersProvider({ children }) {
     }
   }
 
+  async function removeProductFile(orderId, productId, fileId) {
+    try {
+      await filesApi.remove(productId, fileId)
+      setOrders((current) =>
+        current.map((order) =>
+          order.id !== orderId
+            ? order
+            : {
+                ...order,
+                products: order.products.map((product) =>
+                  product.id === productId
+                    ? { ...product, files: product.files.filter((file) => file.id !== fileId) }
+                    : product
+                ),
+              }
+        )
+      )
+      return true
+    } catch (err) {
+      alert(err.message)
+      return false
+    }
+  }
+
   // Item 3.1: status de design granular (null/pendente/em_design/aprovacao/
   // concluido). A resposta traz orderStage junto (mesmo padrão do
   // orderTotalValue) porque concluir o último produto avança o estágio do
@@ -343,6 +367,7 @@ export function OrdersProvider({ children }) {
         moveProductStepStatus,
         addProductComment,
         addProductFile,
+        removeProductFile,
         toggleProductDesignRework,
         setProductDesignStatus,
       }}

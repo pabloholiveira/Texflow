@@ -123,6 +123,11 @@ export function describeEvent(event) {
       return `${productName(event)} — arquivo enviado (${category}): ${payload.fileName}`
     }
 
+    case 'file_deleted': {
+      const category = payload.category === 'referencia' ? 'referência' : 'layout aprovado'
+      return `${productName(event)} — arquivo excluído (${category}): ${payload.fileName}`
+    }
+
     // Evento gravado por uma versão mais nova do backend do que a do front:
     // melhor mostrar o tipo cru do que sumir com a linha do histórico.
     default:
