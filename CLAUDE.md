@@ -485,6 +485,7 @@ Rotas `/pedidos/:id/produtos/:productId/ficha` (uma peça) e `/pedidos/:id/ficha
 - **`src/styles/print.css`** é o único arquivo do projeto em `mm`/`pt` e sem os tokens de cor — aqui o meio tem tamanho físico, e fundo colorido só gasta tinta de impressora de fábrica.
 - **`a.btn` em `buttons.css`**: os links de ficha abrem em outra aba, e o `.btn` foi escrito para `<button>` (que já vem `inline-block` e sem sublinhado).
 - **Dois defeitos que só apareceram OLHANDO a captura, não nas asserções**: a coluna "OK" do checklist ocupava um terço da folha (a regra genérica `.sheet-table th { width: 22% }` jogava toda a sobra na primeira coluna) e a coluna "Total" da grade ficava desproporcional. Os dois resolvidos com `table-layout: fixed` + larguras explícitas.
+- ⚠️ **O VISUAL descrito acima foi refeito em 2026-08-04** — ver "Ficha de produção impressa: redesenho visual" adiante. As decisões de conteúdo desta seção continuam valendo (é por produto, não leva valores, checklist preenchido à caneta); o que mudou foi a apresentação, mais o campo "Layout aprovado", que saiu.
 
 **Deployado em 2026-07-31**, backend antes do frontend (o `git push` sobe a Vercel sozinho, e o front novo lê o `clientId` que só o backend novo devolve). Sem migration. Confirmado de novo que **o `/health` não serve de sinal de deploy**: na primeira sondagem após o `railway up` o campo `clientId` ainda vinha ausente; só na segunda, 15s depois, apareceu — **é o campo novo na resposta que prova a troca**. Verificado ao vivo com usuário descartável, **só leitura**.
 
@@ -591,6 +592,44 @@ O Pablo relatou o modal "demorando pra fechar". A investigação mostrou que **e
 **Deployado em 2026-08-03** na ordem migration → backend → frontend. **A sonda de deploy do backend foi um `DELETE` num arquivo inexistente**: o backend antigo não tem a rota e devolve o 404 em HTML do Express, o novo devolve `{"error":"Arquivo não encontrado"}` — read-only, sem efeito colateral, e serve quando a mudança **não acrescenta campo novo em resposta alguma** (o truque de sempre, olhar um campo novo, não servia aqui). Levou **~4 minutos** até virar, bem mais que os ~15s das vezes anteriores — **mais uma razão para sondar em vez de contar tempo**. Frontend confirmado baixando o bundle publicado e procurando a string nova. Verificado ao vivo com usuário descartável, **só leitura**: "Gerente" no select, `caixa` como Gerente vindo do servidor, ketylin com o botão "Etapas" e o modal oferecendo "Botão", gerente **sem** esse botão, e num pedido real os 5 arquivos com "Excluir", a confirmação nomeando o certo, o Cancelar não apagando nada, e o PDF antes quebrado abrindo em 200.
 
 **Passos operacionais que sobraram para o Pablo** (não são código): atribuir "Botão" à ketylin/simone em Configurações → Usuários → Etapas — enquanto não atribuir, elas seguem barradas, porque **lista vazia nega por desenho**; e a `caixa` precisa deslogar/logar para o papel novo valer.
+
+## Ficha de produção impressa: redesenho visual (✅ 2026-08-04) — não deployado
+
+Fecha o sexto ponto que o Pablo levantou em 2026-08-03 e que ficou esperando ele mandar o print do que não gostou. Partiu de uma **imagem de referência dele** (visual de documento oficial: cabeçalho com marca, prazo em moldura, blocos rotulados), no lugar das tabelas de borda uniforme que havia antes. **Zero mudança em banco, API e rotas** — todo o conteúdo novo já existia nos dados.
+
+**O que a referência NÃO significava, e foi confirmado com ele antes de codar:**
+- **A lista de etapas continua dinâmica** — só as etapas reais daquele produto, na ordem real de produção. As 5 etapas da referência eram exemplo visual; o que mudou foi só a apresentação (ganharam ícone).
+- **"Bordado / Estampa" na referência era descrição do ÍCONE, não rótulo.** Bordado, Silk e DTF dividem o mesmo carretel de linha, mas cada rótulo continua sendo o nome real da operação — **"Estampa" genérica não voltou** (ver o domain model).
+- **Continua sem valores** (unitário, subtotal, vetorização): a ficha circula pela fábrica e pode ir à mão de costureira externa. Ele reafirmou explicitamente.
+
+**Três decisões dele no planejamento:**
+- **Logo em contorno, não o círculo escuro preenchido da referência.** O `print.css` já declarava "preto no branco, sem fundo colorido, porque impressora de fábrica raramente é colorida e fundo só gasta tinta"; um disco sólido de toner numa folha impressa várias vezes por dia contradiria isso. Fica fiel na forma, sem o bloco.
+- **O campo "Layout aprovado" saiu da ficha** (a referência não o tinha). Eu havia recomendado manter, por ser informação de produção real; a chamada é dele.
+- **Extrair o logo em vez de fazer a terceira cópia** (abaixo).
+
+**Duas peças novas em `components/ui/`:**
+- **`Logo.jsx`** — o mesmo SVG de máquina de costura estava copiado **byte a byte** entre `Login` e `Sidebar`, e a ficha seria a terceira cópia. **As classes vêm por prop** (`login-brand`, `sidebar-brand`, `sheet-brand`), e não fixas dentro do componente: assim `login.css`, `sidebar.css` e `print.css` continuam donos da própria aparência e **nenhuma regra de CSS existente precisou mudar** — o componente entrega a marcação, não o estilo. O `stroke="currentColor"` é o que deixa a mesma marca servir à sidebar, ao login e ao papel.
+- **`OperationIcon.jsx`** — ícone por etapa. **A chave é o nome NORMALIZADO** (minúsculo, sem acento nem pontuação), porque `product.workflow[].step` é texto livre sem FK para o catálogo: a "outra operação" digitada à mão na venda chega como string solta, e normalizar faz "Revisão/Finalização", "Revisao / Finalizacao" e "revisão / finalização" caírem todas na mesma lupa. Cobre Corte, Costura, Bordado/Silk/DTF, Lavagem, Revisão/Finalização, Embalagem e **Botão** (que entrou no catálogo em 2026-08-03), mais um marcador neutro de fallback.
+  - **NÃO é coluna `icon` na tabela `operations`**: ninguém pediu ícone configurável, e coluna + UI em Configurações seria construir o que não foi pedido. O preço aceito é que operação nova criada em Configurações sai com o marcador genérico até alguém mapear — que é exatamente o que o fallback existe para fazer, e a ficha nunca quebra por isso.
+
+**Nada de novo nos dados, e vale saber por quê**: `order.createdAt` **já vinha** na resposta da API (`mapOrder`) e o `PrintSheet` **já tinha** a lista de clientes pelo `useClients()` — só passava o nome. Agora passa o registro, e o nome continua saindo do `getClientDisplayName`, único dono da regra empresa-vs-pessoa.
+
+⚠️ **Armadilha de data que a ficha agora expõe**: `deadline` é coluna `DATE` e **precisa** do sufixo `T00:00:00` (senão o navegador lê como UTC e mostra o dia anterior no Brasil), enquanto `createdAt` é `TIMESTAMP` e **não pode** recebê-lo. Tratar as duas igual erra numa delas — daí o `formatDate(value, { dateOnly })` com a distinção comentada no código.
+
+**Detalhes de CSS que não se deduzem:**
+- As divisórias verticais da linha Cor/Tecido/Modelo/Quantidade são **`gap: 1px` sobre fundo preto** num grid, não bordas: evita borda dupla nas junções.
+- O `@media print` precisou de `print-color-adjust: exact` nos cinzas (cabeçalho do checklist, coluna Total), senão o navegador descarta os fundos e a hierarquia da tabela some no papel.
+- **A regra genérica `.sheet-table th { width: 22% }` deixou de existir** — era ela que, em 2026-07-31, jogava toda a sobra na primeira coluna e deixava o quadradinho de marcar com um terço da folha. Hoje as duas tabelas têm `table-layout: fixed` com larguras explícitas.
+- **Modelo aparece duas vezes** (no título grande e na grade de colunas), conforme a referência pediu. É redundância deliberada dele, não descuido.
+- A grade mostra **só os tamanhos com quantidade** — os "–" da referência eram preenchimento de mockup; o servidor descarta tamanho zerado desde a migration `0006`.
+
+**Erro meu no caminho, registrado porque a lição não é a extensão do arquivo**: criei o mapa de ícones como `src/data/operationIcons.js` **com JSX dentro**, e o Vite só transforma JSX em `.jsx` — a aplicação inteira ficou 500 em branco, e **o `npm run lint` passou**. Mas o defeito de fundo era de lugar: **um mapa de ícones é apresentação, não dado**, e todo módulo de `src/data/` (orderStages, designStatuses, sizes, permissions, fileCategories) é JS puro de propósito. Movido para `components/ui/`, que é onde deveria ter nascido.
+
+**Verificação** (Playwright headless contra o banco local, com um produto real que tem grade, observações e **6 etapas — entre elas "Acabamento manual", fora do catálogo**): a etapa custom sai por último (posição nula, `NULLS LAST`) e com o marcador genérico; produto sem grade e sem observações **esconde as duas seções** em vez de imprimir tabela vazia; e pelos PDFs gerados de verdade, **uma peça cabe em 1 página A4 e duas peças saem em 2 páginas**, uma por peça. Também verificado **o que a mudança deslocou**: `Login` e `Sidebar` renderizando a marca com o nome intacto e o item ativo do menu funcionando.
+  - **Dois defeitos só apareceram OLHANDO a captura, com as asserções passando**: os rótulos de seção colados na caixa de cima (faltava respiro antes do bloco, não depois) e **o ícone da Costura ilegível no tamanho de impressão** — a primeira versão, com o corpo como retângulo arredondado, virava um risco com uma caixinha; redesenhado como silhueta em L (mesa, base, coluna+braço, agulha).
+  - **Falha de teste que era pior do que parecia**: eu comparava o texto dos rótulos com a grafia do JSX, mas **`innerText` devolve o texto já transformado pelo CSS** (`text-transform: uppercase`). Além de acusar falso negativo, isso tornava **falso-positivas** as duas checagens de "a seção some" — elas passariam mesmo com a seção presente. Corrigido comparando em minúsculas e acrescentando uma checagem de ausência no DOM. **Ao asserir sobre texto renderizado, lembre que o CSS pode tê-lo mudado.**
+
+**Pendente**: não deployado. Como é frontend puro (sem migration e sem rota nova), o `git push` sozinho basta — é a assimetria Vercel/Railway na direção segura.
 
 ## Possível expansão futura (não é prioridade agora)
 
