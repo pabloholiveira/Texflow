@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useOrders } from '../../context/ordersContext'
 import { useClients } from '../../context/clientsContext'
 import ProductSheet from '../../components/ui/ProductSheet'
-import { getClientNameById } from '../../data/clients'
+import { getClientDisplayName } from '../../data/clients'
 
 /* Página de impressão das fichas de produção.
 
@@ -46,7 +46,12 @@ function PrintSheet() {
   if (products.length === 0)
     return <p className="sheet-message">Produto não encontrado neste pedido.</p>
 
-  const clientName = getClientNameById(clients, order.clientId)
+  /* O registro inteiro, não só o nome: a ficha passou a mostrar também o
+     telefone (redesenho de 2026-08-04). O nome continua saindo de
+     getClientDisplayName, o único lugar que decide o que se exibe de um
+     cliente — empresa se houver, senão a pessoa. */
+  const client = clients.find((item) => item.id === order.clientId)
+  const clientName = getClientDisplayName(client)
 
   return (
     <div className="sheet-page">
@@ -63,6 +68,7 @@ function PrintSheet() {
           order={order}
           product={product}
           clientName={clientName}
+          clientPhone={client?.phone}
         />
       ))}
     </div>
