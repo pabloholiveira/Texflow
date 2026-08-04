@@ -15,6 +15,7 @@ import Conference from './pages/Conference'
 import Delivered from './pages/Delivered'
 import Design from './pages/Design'
 import Reports from './pages/Reports'
+import Finance from './pages/Finance'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import NewOrder from './pages/NewOrder'
@@ -53,6 +54,7 @@ function App() {
                       por isso segue a mesma regra de /pedidos e não tem action. */}
                   <Route path="/entregues" element={<ProtectedRoute><Delivered /></ProtectedRoute>} />
                   <Route path="/relatorios" element={<ProtectedRoute action="reports.view"><Reports /></ProtectedRoute>} />
+                  <Route path="/financeiro" element={<ProtectedRoute action="finance.view"><Finance /></ProtectedRoute>} />
                   <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 </Routes>
               </BrowserRouter>

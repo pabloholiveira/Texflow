@@ -9,11 +9,16 @@
 //
 // 'gerente' acumula pela mesma lógica, do outro lado: tudo da vendedora MAIS
 // a produção inteira. Fica a um passo do admin de propósito — sem
-// Configurações, e fora da futura aba financeira.
+// Configurações e sem a tela /financeiro (FINANCE_ROLES).
 const SALES_ROLES = ['admin', 'vendedora', 'design', 'gerente']
 const DESIGN_ROLES = ['admin', 'design']
 const PRODUCTION_ROLES = ['admin', 'producao', 'gerente']
 const ADMIN_ONLY = ['admin']
+
+/* Quem vê a tela /financeiro. Hoje coincide com ADMIN_ONLY, e ainda assim é
+   constante própria: são decisões independentes. Liberar o faturamento para
+   o gerente um dia não deve, no mesmo edit, entregar Configurações a ele. */
+const FINANCE_ROLES = ['admin']
 
 // Papéis que operam qualquer etapa, sem passar pela atribuição individual
 // (user_operations). Espelha ALL_STEPS_ROLES do backend.
@@ -33,6 +38,7 @@ export const PERMISSIONS = {
   'design.rework': SALES_ROLES,
   'production.move': PRODUCTION_ROLES,
   'settings.admin': ADMIN_ONLY,
+  'finance.view': FINANCE_ROLES,
 }
 
 export function can(user, action) {

@@ -115,6 +115,13 @@ export const reportsApi = {
   leadTime: () => request('/reports/lead-time'),
 }
 
+export const financeApi = {
+  // `month` opcional ('YYYY-MM'): filtra a quebra por tipo de produto. Os
+  // números do momento (a receber, por cliente) ignoram o mês de propósito.
+  overview: (month) =>
+    request(`/finance/overview${month ? `?month=${month}` : ''}`),
+}
+
 export const usersApi = {
   list: () => request('/users'),
   update: (id, fields) => request(`/users/${id}`, { method: 'PATCH', body: fields }),

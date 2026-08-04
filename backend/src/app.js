@@ -10,6 +10,7 @@ import productFilesRouter from './routes/productFiles.js'
 import clientsRouter from './routes/clients.js'
 import operationsRouter from './routes/operations.js'
 import reportsRouter from './routes/reports.js'
+import financeRouter from './routes/finance.js'
 import settingsRouter from './routes/settings.js'
 import usersRouter from './routes/users.js'
 import { requireAuth } from './middleware/requireAuth.js'
@@ -45,6 +46,7 @@ export function createApp() {
   app.use('/clients', clientsRouter)
   app.use('/operations', operationsRouter)
   app.use('/reports', reportsRouter)
+  app.use('/finance', financeRouter)
   app.use('/settings', settingsRouter)
   app.use('/users', usersRouter)
 

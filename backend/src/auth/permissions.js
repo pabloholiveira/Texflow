@@ -14,11 +14,19 @@ export const ROLES = ['admin', 'vendedora', 'design', 'producao', 'gerente']
 //
 // 'gerente' acumula pela mesma lógica, mas do outro lado: tudo da vendedora
 // MAIS a produção inteira. Ele fica a um passo do admin de propósito — não
-// entra em ADMIN_ONLY (Configurações) nem entrará na futura aba financeira.
+// entra em ADMIN_ONLY (Configurações) nem em FINANCE_ROLES (a tela
+// /financeiro, construída em 2026-08-04).
 export const SALES_ROLES = ['admin', 'vendedora', 'design', 'gerente']
 export const DESIGN_ROLES = ['admin', 'design']
 export const PRODUCTION_ROLES = ['admin', 'producao', 'gerente']
 export const ADMIN_ONLY = ['admin']
+
+/* Quem vê a tela /financeiro. Hoje é o mesmo conjunto que ADMIN_ONLY, e
+   mesmo assim é uma constante própria: são decisões independentes que
+   apenas coincidem. Se um dia a Elaine quiser que o gerente veja o
+   faturamento sem ganhar Configurações, mexe-se aqui e nada mais — com uma
+   constante compartilhada, o mesmo edit abriria as duas coisas. */
+export const FINANCE_ROLES = ['admin']
 
 // Papéis que operam QUALQUER etapa, sem passar pela atribuição individual da
 // tabela user_operations. O gerente entra aqui porque o sentido dele é cobrir

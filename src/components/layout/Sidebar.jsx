@@ -103,6 +103,21 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/financeiro',
+    label: 'Financeiro',
+    // Só admin (FINANCE_ROLES). O gerente não vê o item nem a tela — sem a
+    // action aqui, "sumiu o menu" viraria mistério; com ela, o item
+    // simplesmente não existe para quem não pode.
+    action: 'finance.view',
+    // Cifrão: dinheiro, e distinto das barras de Relatórios ao lado.
+    icon: (
+      <>
+        <path d="M12 2v20" />
+        <path d="M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2.2 2.8 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3" />
+      </>
+    ),
+  },
+  {
     to: '/configuracoes',
     label: 'Configurações',
     icon: (

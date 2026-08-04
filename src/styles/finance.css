@@ -1,0 +1,158 @@
+/* Tela financeira. Reusa .report-table e .table-scroll de reports.css — são
+   tabelas do mesmo tipo, e duplicar as regras faria as duas telas
+   divergirem visualmente com o tempo. */
+
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.finance-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Realce só no que exige ação: dinheiro a receber é o único dos três que
+   alguém precisa fazer alguma coisa a respeito. */
+.finance-card-alert {
+  border-color: var(--color-warning-text);
+}
+
+.finance-card-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.finance-card-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.finance-card-hint {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.finance-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.finance-panel h2 {
+  font-size: 1.05rem;
+  margin: 0 0 16px;
+}
+
+.finance-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.finance-panel-header h2 {
+  margin: 0;
+}
+
+.finance-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.finance-month-nav strong {
+  min-width: 9rem;
+  text-align: center;
+}
+
+.finance-month-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 0 20px;
+}
+
+.finance-month-summary strong {
+  display: block;
+  font-size: 1.2rem;
+  margin-top: 4px;
+}
+
+.finance-variation {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.finance-up {
+  color: var(--color-success-text);
+}
+
+.finance-down {
+  color: var(--color-danger);
+}
+
+.finance-row-active {
+  background: var(--color-primary-soft);
+  font-weight: 600;
+}
+
+.finance-owed {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* As ressalvas (série por data do pedido, produto sem preço) precisam ficar
+   junto do número que elas qualificam — num rodapé geral ninguém leria. */
+.finance-note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.finance-error {
+  color: var(--color-danger);
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1024px) {
+  .finance-cards,
+  .finance-month-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .finance-cards,
+  .finance-month-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .finance-panel-header,
+  .finance-month-nav {
+    width: 100%;
+  }
+
+  .finance-month-nav {
+    justify-content: space-between;
+  }
+}
