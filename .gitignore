@@ -25,3 +25,10 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+
+# Gerado pelo app do Codex na primeira vez que ele roda no repositório: uma
+# cópia do CLAUDE.md sob o nome que ele lê. É retrato de um instante, não
+# espelho — não acompanha as mudanças do CLAUDE.md e diverge sozinho.
+# Versionar a cópia deixaria 169k de texto duplicado para sincronizar à mão.
+# O CLAUDE.md é a fonte única; o Codex regenera o dele onde for usado.
+AGENTS.md
