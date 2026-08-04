@@ -67,8 +67,26 @@ export function describeEvent(event) {
     case 'order_updated':
       return `Dados do pedido alterados (${fieldList(payload.fields)})`
 
-    case 'payment_registered':
-      return `Pagamento registrado: ${formatCurrency(Number(payload.amountPaid) || 0)}`
+    /* Duas formas de payload convivem de propósito, e a antiga não vai
+       sumir: os eventos gravados até 2026-08-04 guardavam só `amountPaid`
+       (o acumulado do pedido), e os novos guardam `previous`/`current`/
+       `delta`. Ler só a forma nova faria o histórico real que já está no
+       banco exibir "R$ 0,00". */
+    case 'payment_registered': {
+      if (payload.delta === undefined) {
+        return `Pagamento registrado: total pago passou a ${formatCurrency(
+          Number(payload.amountPaid) || 0
+        )}`
+      }
+      const delta = Number(payload.delta) || 0
+      // Delta negativo é correção de lançamento, não dinheiro saindo —
+      // chamar isso de "pagamento" na timeline confundiria quem lê.
+      const label =
+        delta < 0
+          ? `Valor pago corrigido em ${formatCurrency(Math.abs(delta))} para menos`
+          : `Pagamento registrado: ${formatCurrency(delta)}`
+      return `${label} (total pago: ${formatCurrency(Number(payload.current) || 0)})`
+    }
 
     case 'order_stage_changed': {
       const movement = payload.direction === 'backward' ? 'voltou para' : '→'

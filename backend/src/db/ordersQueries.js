@@ -47,7 +47,7 @@ export async function findBlockingSteps(db, productId, stepPosition) {
 // Postgres NUMERIC volta do node-pg como string (evita perda de precisão
 // por padrão) — sem essa conversão o front receberia "28.00" em vez de 28.
 // Ver Funcionalidades comerciais (item 1) no CLAUDE.md.
-function toNumber(value) {
+export function toNumber(value) {
   return value === null ? null : Number(value)
 }
 

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { withTransaction } from '../db/withTransaction.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { fetchOrders, mapOrder, ORDER_STAGES } from '../db/ordersQueries.js'
+import { fetchOrders, mapOrder, toNumber, ORDER_STAGES } from '../db/ordersQueries.js'
 import { logEvent, fetchOrderEvents } from '../db/eventsQueries.js'
 import { requireRole } from '../middleware/requireRole.js'
 import { SALES_ROLES } from '../auth/permissions.js'
@@ -83,26 +83,61 @@ router.patch(
     // Virou transação por causa do log: a mudança e o evento que a descreve
     // precisam ser gravados juntos (ver logEvent).
     const updatedId = await withTransaction(async (client) => {
+      /* Lê o valor pago ANTES do UPDATE para conseguir o delta — sem ele o
+         evento só sabe o acumulado, e "quanto entrou neste mês" vira uma
+         conta de diferença entre eventos consecutivos, que quebra quando
+         falta um deles. O FOR UPDATE trava a linha até o COMMIT: sem isso,
+         dois pagamentos simultâneos no mesmo pedido leriam o mesmo
+         `previous` e gravariam deltas somando errado. */
+      const before = await client.query(
+        'SELECT amount_paid FROM orders WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      )
+      if (before.rows.length === 0) return null
+
       const result = await client.query(
-        `UPDATE orders SET ${setClause}, updated_at = now() WHERE id = $${values.length + 1} RETURNING id`,
+        `UPDATE orders SET ${setClause}, updated_at = now() WHERE id = $${values.length + 1} RETURNING id, amount_paid`,
         [...values, req.params.id]
       )
       if (result.rows.length === 0) return null
 
-      // Registrar pagamento e editar o pedido usam a mesma rota, mas são
-      // acontecimentos diferentes na linha do tempo — o modal de pagamento
-      // manda só amountPaid, o de edição manda clientId/deadline.
-      const changedFields = updates.map(([key]) => key)
-      const isPayment = changedFields.length === 1 && changedFields[0] === 'amountPaid'
+      /* Registrar pagamento e editar o pedido usam a mesma rota, mas são
+         acontecimentos diferentes na linha do tempo — e podem acontecer na
+         MESMA chamada: "Finalizar Pedido" manda clientId e amountPaid
+         juntos, o que é uma edição E uma entrada de dinheiro.
 
-      await logEvent(client, {
-        orderId: req.params.id,
-        type: isPayment ? 'payment_registered' : 'order_updated',
-        payload: isPayment
-          ? { amountPaid: req.body.amountPaid }
-          : { fields: changedFields },
-        user: req.user.username,
-      })
+         Até 2026-08-04 isto era um ou-exclusivo ("é pagamento só se
+         amountPaid for o único campo"), e por isso o pagamento da venda —
+         normalmente o maior — nunca virava payment_registered: era gravado
+         como order_updated, cujo payload guarda só os nomes dos campos.
+         O valor não ia para lugar nenhum. Agora os dois são independentes. */
+      const changedFields = updates.map(([key]) => key)
+      const previous = toNumber(before.rows[0].amount_paid)
+      const current = toNumber(result.rows[0].amount_paid)
+
+      // Sem mudança de valor não há pagamento: antes isto gravava um evento
+      // a cada clique em Salvar, mesmo repetindo o mesmo número.
+      if (changedFields.includes('amountPaid') && current !== previous) {
+        await logEvent(client, {
+          orderId: req.params.id,
+          type: 'payment_registered',
+          // delta negativo é correção de lançamento, não recebimento — o
+          // relatório precisa distinguir as duas coisas, e só o acumulado
+          // não permitia isso.
+          payload: { previous, current, delta: Number((current - previous).toFixed(2)) },
+          user: req.user.username,
+        })
+      }
+
+      const otherFields = changedFields.filter((field) => field !== 'amountPaid')
+      if (otherFields.length > 0) {
+        await logEvent(client, {
+          orderId: req.params.id,
+          type: 'order_updated',
+          payload: { fields: otherFields },
+          user: req.user.username,
+        })
+      }
 
       return result.rows[0].id
     })
