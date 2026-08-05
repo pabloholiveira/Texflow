@@ -1,0 +1,20 @@
+-- Cancelamento de pedido (2026-08-05).
+--
+-- Coluna própria, e NÃO um valor novo em orders.stage. O motivo é concreto:
+-- advance-stage faz ORDER_STAGES.indexOf(stage), que devolveria -1 para um
+-- estágio fora do array, e a linha seguinte lê ORDER_STAGES[-1 + 1] — ou
+-- seja, 'venda'. Clicar em "Avançar etapa" num pedido cancelado o
+-- ressuscitaria no começo do fluxo, sem erro nenhum. E colocar 'cancelado'
+-- DENTRO do array faria dele um chip no tracker de todo pedido, como se
+-- fosse etapa pela qual todos passam.
+--
+-- Sendo ortogonal ao stage, o cancelamento preserva ATÉ ONDE o pedido
+-- chegou: cancelar na Venda e cancelar na Produção são situações
+-- diferentes (uma desperdiçou material, a outra não), e substituir o stage
+-- apagaria essa informação. Mesmo desenho de is_draft (marcador paralelo à
+-- progressão) e de picked_up_at (carimbo de um evento).
+--
+-- Cancelar NÃO exclui nada: o pedido, os produtos e todo o product_events
+-- continuam no banco e consultáveis — mesmo princípio já adotado para
+-- pedido entregue. O que muda é só onde ele aparece.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;

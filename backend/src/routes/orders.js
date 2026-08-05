@@ -179,8 +179,20 @@ router.patch(
   '/:id/advance-stage',
   requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
-    const current = await pool.query('SELECT stage FROM orders WHERE id = $1', [req.params.id])
+    const current = await pool.query(
+      'SELECT stage, cancelled_at FROM orders WHERE id = $1',
+      [req.params.id]
+    )
     if (current.rows.length === 0) return res.status(404).json({ error: 'Pedido não encontrado' })
+
+    // Pedido cancelado não anda no fluxo. Sem esta trava seria só uma dica de
+    // tela: a rota continuaria aceitando, e um clique reabriria o pedido pela
+    // porta dos fundos, sem passar por "Reabrir pedido".
+    if (current.rows[0].cancelled_at) {
+      return res
+        .status(409)
+        .json({ error: 'Pedido cancelado. Reabra o pedido antes de avançar a etapa.' })
+    }
 
     const currentIndex = ORDER_STAGES.indexOf(current.rows[0].stage)
     const nextStage = ORDER_STAGES[currentIndex + 1]
@@ -273,8 +285,18 @@ router.patch(
   '/:id/regress-stage',
   requireRole(...SALES_ROLES),
   asyncHandler(async (req, res) => {
-    const current = await pool.query('SELECT stage FROM orders WHERE id = $1', [req.params.id])
+    const current = await pool.query(
+      'SELECT stage, cancelled_at FROM orders WHERE id = $1',
+      [req.params.id]
+    )
     if (current.rows.length === 0) return res.status(404).json({ error: 'Pedido não encontrado' })
+
+    // Mesma trava do avanço: cancelado sai do fluxo nos dois sentidos.
+    if (current.rows[0].cancelled_at) {
+      return res
+        .status(409)
+        .json({ error: 'Pedido cancelado. Reabra o pedido antes de voltar a etapa.' })
+    }
 
     const currentIndex = ORDER_STAGES.indexOf(current.rows[0].stage)
     const previousStage = ORDER_STAGES[currentIndex - 1]
@@ -320,6 +342,100 @@ router.get(
     }
 
     res.json(await fetchOrderEvents(pool, req.params.id))
+  })
+)
+
+/* Cancelar e reabrir (2026-08-05).
+
+   Duas rotas explícitas em vez de um toggle: cancelar é destrutivo do ponto
+   de vista operacional (o pedido some das telas de trabalho) e reabrir é o
+   contrário — um único endpoint que "inverte" esconderia qual das duas
+   coisas quem chamou queria fazer, e um clique repetido faria o oposto do
+   esperado.
+
+   SALES_ROLES inclui o design, que acumula tudo da vendedora por decisão já
+   registrada; o gerente também está aí. Confirmado com o Pablo. */
+router.patch(
+  '/:id/cancel',
+  requireRole(...SALES_ROLES),
+  asyncHandler(async (req, res) => {
+    const cancelled = await withTransaction(async (client) => {
+      const current = await client.query(
+        'SELECT stage, cancelled_at FROM orders WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      )
+      if (current.rows.length === 0) return { error: 404 }
+
+      const { stage, cancelled_at: alreadyCancelled } = current.rows[0]
+      if (alreadyCancelled) return { error: 409, message: 'Pedido já está cancelado.' }
+
+      /* Pedido entregue não se cancela: a peça saiu e o dinheiro entrou.
+         Registrar cancelamento aqui seria um erro que ninguém desfaz, e o
+         pedido sumiria do Financeiro levando junto um recebimento real. */
+      if (stage === 'entregue') {
+        return {
+          error: 409,
+          message: 'Pedido já entregue não pode ser cancelado.',
+        }
+      }
+
+      await client.query('UPDATE orders SET cancelled_at = now(), updated_at = now() WHERE id = $1', [
+        req.params.id,
+      ])
+
+      // O estágio vai no payload porque a coluna preserva onde o pedido
+      // estava, e "cancelado ainda na Venda" conta uma história diferente de
+      // "cancelado já em Produção".
+      await logEvent(client, {
+        orderId: req.params.id,
+        type: 'order_cancelled',
+        payload: { stage },
+        user: req.user.username,
+      })
+      return { ok: true }
+    })
+
+    if (cancelled.error === 404) return res.status(404).json({ error: 'Pedido não encontrado' })
+    if (cancelled.error) return res.status(cancelled.error).json({ error: cancelled.message })
+
+    const [order] = await fetchOrders('WHERE id = $1', [req.params.id])
+    res.json(order)
+  })
+)
+
+router.patch(
+  '/:id/uncancel',
+  requireRole(...SALES_ROLES),
+  asyncHandler(async (req, res) => {
+    const reopened = await withTransaction(async (client) => {
+      const current = await client.query(
+        'SELECT stage, cancelled_at FROM orders WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      )
+      if (current.rows.length === 0) return { error: 404 }
+      if (!current.rows[0].cancelled_at)
+        return { error: 409, message: 'Pedido não está cancelado.' }
+
+      /* Volta para o mesmo estágio em que parou — é o que a coluna separada
+         permite e um `stage = 'cancelado'` teria destruído. */
+      await client.query('UPDATE orders SET cancelled_at = NULL, updated_at = now() WHERE id = $1', [
+        req.params.id,
+      ])
+
+      await logEvent(client, {
+        orderId: req.params.id,
+        type: 'order_uncancelled',
+        payload: { stage: current.rows[0].stage },
+        user: req.user.username,
+      })
+      return { ok: true }
+    })
+
+    if (reopened.error === 404) return res.status(404).json({ error: 'Pedido não encontrado' })
+    if (reopened.error) return res.status(reopened.error).json({ error: reopened.message })
+
+    const [order] = await fetchOrders('WHERE id = $1', [req.params.id])
+    res.json(order)
   })
 )
 

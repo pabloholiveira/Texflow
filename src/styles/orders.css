@@ -116,3 +116,27 @@
     padding: 20px;
   }
 }
+
+/* Faixa de pedido cancelado (2026-08-05). Faixa larga e não um badge
+   discreto: um pedido cancelado que pareça normal é o pior resultado aqui —
+   alguém seguiria trabalhando nele sem perceber. */
+.order-cancelled-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-text);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.order-cancelled-banner strong {
+  color: var(--color-warning-text);
+}
+
+.order-cancelled-banner span {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}

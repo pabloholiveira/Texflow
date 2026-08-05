@@ -72,7 +72,7 @@ router.get(
       FROM product_workflow_steps pws
       JOIN products p ON p.id = pws.product_id
       JOIN orders o ON o.id = p.order_id
-      WHERE o.is_draft = false AND o.stage NOT IN ('venda', 'entregue') AND pws.status != 'done'
+      WHERE o.is_draft = false AND o.cancelled_at IS NULL AND o.stage NOT IN ('venda', 'entregue') AND pws.status != 'done'
       GROUP BY pws.step_name, pws.status
       ORDER BY pws.step_name
     `)
@@ -106,7 +106,7 @@ router.get(
         ORDER BY changed_at DESC
         LIMIT 1
       ) last_event ON true
-      WHERE o.is_draft = false AND o.stage NOT IN ('venda', 'entregue') AND pws.status != 'done'
+      WHERE o.is_draft = false AND o.cancelled_at IS NULL AND o.stage NOT IN ('venda', 'entregue') AND pws.status != 'done'
       ORDER BY since ASC
       LIMIT 10
     `)

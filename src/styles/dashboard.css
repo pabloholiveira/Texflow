@@ -125,3 +125,40 @@
     padding: 20px;
   }
 }
+
+/* Seção de cancelados no Dashboard. Só é renderizada quando há algum, então
+   não precisa de estado vazio. */
+.dashboard-cancelled-hint {
+  margin: -8px 0 16px;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+.cancelled-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cancelled-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.cancelled-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.cancelled-item-stage {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--color-warning-text);
+}

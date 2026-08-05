@@ -60,6 +60,12 @@ CREATE TABLE IF NOT EXISTS orders (
   -- Quando o cliente retirou (migration 0009). O estágio diz QUE retirou;
   -- esta coluna diz QUANDO, para um relatório futuro de prazo real.
   picked_up_at TIMESTAMP,
+  -- Cancelamento (migration 0013). Coluna própria em vez de um valor novo em
+  -- `stage`, porque o cancelamento não é uma posição no fluxo linear: é uma
+  -- saída a partir de qualquer ponto. Sendo ortogonal, preserva até onde o
+  -- pedido chegou ("cancelado na Produção"). Cancelar não exclui nada — o
+  -- pedido e o histórico seguem no banco, só saem da visão operacional.
+  cancelled_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT now(),
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );

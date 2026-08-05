@@ -38,9 +38,15 @@ const router = Router()
    parser de DATE e do T00:00:00 no prazo de entrega. */
 const LOCAL_CREATED_AT = `(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')`
 
-// Rascunho nunca entra em número de dinheiro: é pedido que a vendedora pode
-// abandonar pela metade, e /pedidos/novo cria um a cada visita.
-const REAL_ORDERS = 'NOT o.is_draft'
+/* Rascunho nunca entra em número de dinheiro: é pedido que a vendedora pode
+   abandonar pela metade, e /pedidos/novo cria um a cada visita.
+
+   Cancelado também fica FORA DE TUDO — vendido, a receber e recebido —, por
+   decisão do Pablo (2026-08-05). Consequência aceita e registrada: se o
+   cliente pagou e o pedido foi cancelado depois, esse dinheiro some do
+   relatório sem que nenhuma devolução tenha sido registrada, porque o
+   TexFlow não modela devolução. */
+const REAL_ORDERS = 'NOT o.is_draft AND o.cancelled_at IS NULL'
 
 /* Junta as duas séries pela chave do mês.
 

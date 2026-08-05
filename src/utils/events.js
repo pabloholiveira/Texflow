@@ -88,6 +88,19 @@ export function describeEvent(event) {
       return `${label} (total pago: ${formatCurrency(Number(payload.current) || 0)})`
     }
 
+    /* O estágio vai no payload porque o cancelamento preserva onde o pedido
+       parou — "cancelado ainda na Venda" e "cancelado já em Produção" são
+       situações bem diferentes para quem lê o histórico depois. */
+    case 'order_cancelled':
+      return `Pedido cancelado${
+        payload.stage ? ` na etapa ${getStageLabel(payload.stage)}` : ''
+      }`
+
+    case 'order_uncancelled':
+      return `Pedido reaberto${
+        payload.stage ? ` na etapa ${getStageLabel(payload.stage)}` : ''
+      }`
+
     case 'order_stage_changed': {
       const movement = payload.direction === 'backward' ? 'voltou para' : '→'
       const base =

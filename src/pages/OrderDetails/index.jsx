@@ -24,10 +24,17 @@ import {
   ORDER_STAGES,
   getStageState,
   getStageLabel,
+  isCancelledOrder,
 } from '../../data/orderStages'
 import { getClientDisplayName } from '../../data/clients'
 import { formatCurrency } from '../../utils/currency'
 import { buildWhatsAppMessage, buildWhatsAppLink } from '../../utils/whatsapp'
+
+// cancelled_at é TIMESTAMP (ISO completo), então vira Date direto — o
+// truque do 'T00:00:00' é só para colunas DATE puras como `deadline`.
+function formatCancelDate(value) {
+  return value ? new Date(value).toLocaleString('pt-BR') : '-'
+}
 
 const emptyClient = {
   personName: '',
@@ -39,8 +46,16 @@ const emptyClient = {
 
 function OrderDetails() {
   const { id } = useParams()
-  const { orders, isLoading, advanceOrderStage, regressOrderStage, updateOrderInfo } =
-    useOrders()
+  const {
+    orders,
+    isLoading,
+    advanceOrderStage,
+    regressOrderStage,
+    updateOrderInfo,
+    cancelOrder,
+    uncancelOrder,
+  } = useOrders()
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const { clients, findOrCreateClient } = useClients()
   const { whatsappTemplate } = useSettings()
   // Uma permissão só governa a tela inteira: editar pedido, pagamento,
@@ -145,6 +160,15 @@ function OrderDetails() {
     window.open(buildWhatsAppLink(client.phone, message), '_blank')
   }
 
+  async function handleCancel() {
+    const done = await cancelOrder(order.id)
+    if (done) setIsCancelModalOpen(false)
+  }
+
+  function handleUncancel() {
+    uncancelOrder(order.id)
+  }
+
   const {
     products,
     product,
@@ -205,6 +229,8 @@ function OrderDetails() {
       </Layout>
     )
   }
+
+  const cancelled = isCancelledOrder(order)
 
   // Design → Aprovação e Aprovação → Em produção são transições do sistema
   // (disparam sozinhas conforme os cards andam no kanban de design — ver o
@@ -271,9 +297,35 @@ function OrderDetails() {
             <Button variant="secondary" onClick={openEditOrderModal}>
               Editar Pedido
             </Button>
+            {/* Cancelar sai da visão operacional sem excluir nada, então o
+                caminho de volta ("Reabrir") tem que estar no mesmo lugar —
+                senão um clique errado viraria um pedido perdido. */}
+            {cancelled ? (
+              <Button variant="secondary" onClick={handleUncancel}>
+                Reabrir Pedido
+              </Button>
+            ) : (
+              <Button variant="danger" onClick={() => setIsCancelModalOpen(true)}>
+                Cancelar Pedido
+              </Button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Faixa de estado, não um badge discreto: um pedido cancelado que
+          pareça normal é o pior resultado possível aqui — alguém seguiria
+          trabalhando nele. */}
+      {cancelled && (
+        <div className="order-cancelled-banner">
+          <strong>Pedido cancelado</strong>
+          <span>
+            Cancelado em {formatCancelDate(order.cancelledAt)}, na etapa{' '}
+            {getStageLabel(order.stage)}. O pedido e todo o histórico continuam
+            guardados; ele apenas não aparece nas telas de trabalho.
+          </span>
+        </div>
+      )}
 
       <section className="order-info">
         <div>
@@ -653,6 +705,34 @@ function OrderDetails() {
             Fechar
           </Button>
           <Button onClick={uploadFile}>Enviar Arquivo</Button>
+        </div>
+      </Modal>
+
+      {/* Modal e não confirm(): o diálogo cinza do navegador a pessoa aprende
+          a clicar no automático, e o número do pedido dentro da pergunta é o
+          que impede cancelar o errado. Mesmo padrão da exclusão de arquivo. */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        title="Cancelar pedido"
+      >
+        <p className="confirm-text">
+          Cancelar o pedido <strong>{order.orderNumber}</strong>
+          {client ? ` — ${getClientDisplayName(client)}` : ''}?
+        </p>
+        <p className="confirm-hint">
+          Ele sai das telas de trabalho, mas <strong>nada é excluído</strong>:
+          o pedido, os produtos e todo o histórico continuam guardados, e dá
+          para reabrir depois. O pedido também deixa de contar no Financeiro.
+        </p>
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setIsCancelModalOpen(false)}>
+            Voltar
+          </Button>
+          <Button variant="danger" onClick={handleCancel}>
+            Cancelar Pedido
+          </Button>
         </div>
       </Modal>
     </Layout>

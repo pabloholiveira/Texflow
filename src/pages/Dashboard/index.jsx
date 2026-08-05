@@ -5,7 +5,7 @@ import { useClients } from '../../context/clientsContext'
 import { useOperations } from '../../context/operationsContext'
 import { useAuth } from '../../context/authContext'
 import { getClientDisplayName } from '../../data/clients'
-import { isActiveOrder } from '../../data/orderStages'
+import { isActiveOrder, isCancelledOrder, getStageLabel } from '../../data/orderStages'
 
 // Deadline vem do backend como string "YYYY-MM-DD" pura (ver pool.js), então
 // dá pra comparar como texto direto, sem passar por Date/fuso horário.
@@ -40,6 +40,12 @@ function Dashboard() {
   // senão o número só cresce para sempre. Ver isActiveOrder em
   // data/orderStages.js.
   const activeOrders = orders.filter(isActiveOrder)
+  // Mais recentes primeiro: quem abre o Dashboard quer ver o que acabou de
+  // ser cancelado, não o mais antigo.
+  const cancelledOrders = orders
+    .filter(isCancelledOrder)
+    .slice()
+    .sort((a, b) => new Date(b.cancelledAt) - new Date(a.cancelledAt))
   const today = todayString()
 
   // Tudo abaixo deriva de activeOrders, então um pedido entregue já não
@@ -145,6 +151,37 @@ function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* Cancelados moram aqui, e não em tela própria, por decisão do Pablo:
+          cancelamento é raro na Kavi, e um item de menu para algo que se
+          consulta de vez em quando não se paga. A seção só existe quando há
+          algum — um bloco vazio permanente seria ruído no retrato do dia.
+
+          Mostra a etapa em que parou porque a coluna cancelled_at é
+          ortogonal ao stage: cancelar na Venda e cancelar na Produção são
+          situações diferentes, e um `stage = 'cancelado'` teria apagado
+          essa informação. */}
+      {cancelledOrders.length > 0 && (
+        <section className="dashboard-panel dashboard-cancelled">
+          <h2>Pedidos cancelados ({cancelledOrders.length})</h2>
+          <p className="dashboard-cancelled-hint">
+            Nada foi excluído — o histórico continua guardado. Abra o pedido
+            para reabri-lo.
+          </p>
+
+          <div className="cancelled-list">
+            {cancelledOrders.map((order) => (
+              <Link key={order.id} to={`/pedidos/${order.id}`} className="cancelled-item">
+                <strong>{order.orderNumber}</strong>
+                <span>{getClientDisplayName(clients.find((c) => c.id === order.clientId))}</span>
+                <span className="cancelled-item-stage">
+                  cancelado na etapa {getStageLabel(order.stage)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </Layout>
   )
 }

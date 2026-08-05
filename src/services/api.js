@@ -60,6 +60,10 @@ export const ordersApi = {
   finalize: (id) => request(`/orders/${id}/finalize`, { method: 'PATCH' }),
   advanceStage: (id) => request(`/orders/${id}/advance-stage`, { method: 'PATCH' }),
   regressStage: (id) => request(`/orders/${id}/regress-stage`, { method: 'PATCH' }),
+  // Cancelar e reabrir são rotas distintas, não um toggle: um endpoint que
+  // inverte esconderia qual das duas quem chamou queria.
+  cancel: (id) => request(`/orders/${id}/cancel`, { method: 'PATCH' }),
+  uncancel: (id) => request(`/orders/${id}/uncancel`, { method: 'PATCH' }),
   events: (id) => request(`/orders/${id}/events`),
 }
 

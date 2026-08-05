@@ -203,6 +203,7 @@ export function mapOrder(orderRow, products = []) {
     totalValue: toNumber(orderRow.total_value),
     amountPaid: toNumber(orderRow.amount_paid),
     pickedUpAt: orderRow.picked_up_at,
+    cancelledAt: orderRow.cancelled_at,
     createdAt: orderRow.created_at,
     updatedAt: orderRow.updated_at,
     products,

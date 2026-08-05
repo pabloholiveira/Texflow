@@ -130,6 +130,28 @@ export function OrdersProvider({ children }) {
     }
   }
 
+  async function cancelOrder(orderId) {
+    try {
+      const order = await ordersApi.cancel(orderId)
+      replaceOrder(order)
+      return order
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
+  async function uncancelOrder(orderId) {
+    try {
+      const order = await ordersApi.uncancel(orderId)
+      replaceOrder(order)
+      return order
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
   async function addProduct(orderId, productDraft) {
     try {
       const { orderTotalValue, ...product } = await productsApi.create(orderId, productDraft)
@@ -360,6 +382,8 @@ export function OrdersProvider({ children }) {
         updateOrderInfo,
         advanceOrderStage,
         regressOrderStage,
+        cancelOrder,
+        uncancelOrder,
         addProduct,
         removeProduct,
         updateProductInfo,
