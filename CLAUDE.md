@@ -689,6 +689,19 @@ Sai de `product_events`, **não** de `orders.amount_paid`: a coluna só sabe o a
 - **`receiptsSince` é derivado do próprio dado**, não uma data fixa no código: ninguém precisa lembrar de atualizar constante, e num banco novo a resposta continua certa.
 - ⚠️ **`MIN()` sobre timestamp é formatado em SQL, não em JS.** O node-pg devolveria um `Date` interpretado no fuso do processo Node, e um `toISOString()` depois disso deslocaria o dia — e o mês, numa virada. Quarta aparição do mesmo tipo de armadilha.
 
+### Filtro de período nos cartões (2026-08-05)
+
+Seis janelas no topo da tela: **Tudo · Últimos 7 dias · Últimos 30 dias · Últimos 3 meses · Últimos 12 meses · Este ano**. `Tudo` é o padrão, para quem abre ver o mesmo de antes.
+
+- **O recorte é pela DATA DO PEDIDO, não por data do pagamento** — decisão do Pablo depois de eu levantar a alternativa. Somar os pagamentos datados seria o fluxo de caixa de verdade, **mas em produção não existe nenhum**: o valor pago só passou a ser gravado com data em 04/08 e ninguém registrou pagamento desde então, então os cartões marcariam **R$ 0,00 enquanto a Kavi já recebeu R$ 2.445**. Assim os dois cartões significam a mesma coisa: *dos pedidos feitos nesta janela, vendemos X e recebemos Y*.
+- ⚠️ **Isso faz "Recebido" ter DOIS sentidos na mesma tela, de propósito**: nos cartões é "já pago dos pedidos da janela"; na coluna da tabela mensal continua sendo por **data do pagamento**. Os rótulos e a nota de rodapé é que separam os dois — mexer neles sem cuidado reintroduz a confusão.
+- **"A receber" NÃO responde ao filtro**, e o cartão diz isso ("hoje", "não muda com o período"). É dívida do momento, não fluxo: um pedido de julho ainda em aberto é dinheiro a receber agora, e escondê-lo num recorte de 30 dias faria a cobrança perder justamente o que importa.
+- **O filtro governa só os cartões.** A série mensal e a quebra por tipo seguem com a navegação por mês. São dois controles de tempo na mesma tela, cada um visivelmente preso ao seu bloco — a alternativa (um controle só) custaria a escolha de um mês específico e a comparação mês a mês.
+- **As janelas são um mapa fechado (`PERIOD_WINDOWS`), não interpolação do que vem na query string** — o valor entra direto no SQL, então texto livre ali seria injeção. Chave desconhecida cai em `all`. Verificado mandando `'; DROP TABLE orders; --`.
+- **Ordem de deploy importa aqui**: com o frontend novo e o backend velho, `period=7d` cai em `all` e o cartão diz "últimos 7 dias" mostrando o total de sempre — **errado sem dar sinal**. Backend primeiro, e a sonda é o backend **ecoar** o período pedido em vez de `all`.
+
+**Lição de teste que se repetiu duas vezes neste dia**: asserções com valor chumbado supondo que o banco só tem o dado de teste. O banco local tinha outros pedidos pagos na janela, e a checagem acusou falha num comportamento correto. O certo é **conferir contra a mesma agregação rodada em SQL cru** — mesmo método já usado no relatório de prazo.
+
 ### Limitações conhecidas e aceitas
 
 - **"Recebido em julho" nunca vai existir.** O dado não foi gravado e não há de onde tirar. A tela é explícita sobre isso em vez de mostrar número inventado. Se um dia for necessário, o caminho seria a tabela `order_payments` com lançamento retroativo — a opção que o Pablo descartou por ora.
