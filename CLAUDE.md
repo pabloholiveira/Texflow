@@ -118,7 +118,7 @@ This is the most important — and least obvious from the code alone — part of
   - **`GET /reports/bottlenecks`** devolve `volumeByStep` (quantos produtos `pending`/`in_progress` por operação) e `stuckProducts` (os parados há mais tempo, pelo `changed_at` do evento mais recente ou pelo `created_at` da etapa se nunca houve evento). **Escopo: pedidos não-rascunho, sem os entregues** (ver "Pedido entregue sai da visão operacional" para a evolução desse filtro e a correção do raciocínio original).
   - `Reports` busca os endpoints com `useState`/`useEffect` na própria página via `reportsApi`, **sem context compartilhado** — nenhuma outra tela consome esses dados (ao contrário dos Providers, que existem porque várias telas precisam do mesmo). Renderiza `<table>` simples, sem gráficos.
 
-**Ainda não construído** (não presuma que existe): catálogos gerenciados de modelos/tecidos/cores/tipos — hoje é texto livre com sugestões do que já foi digitado, e isso é **decisão deliberada** (ver `SuggestibleInput` em Architecture), não pendência; "Reativar usuário" (não há rota); e a **visão financeira para admins** (fluxo do mês, recebido vs. a receber), que é o próximo grande item e tem sessão própria de planejamento — ver "Melhorias do uso diário" abaixo.
+**Ainda não construído** (não presuma que existe): catálogos gerenciados de modelos/tecidos/cores/tipos — hoje é texto livre com sugestões do que já foi digitado, e isso é **decisão deliberada** (ver `SuggestibleInput` em Architecture), não pendência; "Reativar usuário" (não há rota). **A visão financeira para admins saiu desta lista em 2026-08-05** — ver "Visão financeira para administradores" abaixo.
 
 ## Backend migration roadmap (2026-07-04 → 2026-07-06) — ✅ etapas 1 a 7 concluídas
 
@@ -454,7 +454,7 @@ Cogitou-se excluir referências e layouts do Cloudinary X dias após a entrega, 
 
 ## Melhorias do uso diário: cliente visível, busca e ficha impressa (✅ 2026-07-31)
 
-Três itens levantados pelo Pablo usando o sistema, feitos na ordem 1 → 2 → 4 combinada com ele. **O item 3 da lista dele (visão financeira para admins: fluxo do mês, recebido vs. a receber) foi deliberadamente NÃO implementado** — ele pediu para registrar como **o próximo grande item, com sessão própria de planejamento**. Ao planejá-lo, note a tensão com a fronteira declarada no topo deste arquivo ("TexFlow não é sistema financeiro/fiscal"). O `gerente` foi deliberadamente deixado de fora dessa futura aba (ver "Papel `gerente`").
+Três itens levantados pelo Pablo usando o sistema, feitos na ordem 1 → 2 → 4 combinada com ele. **O item 3 da lista dele (visão financeira para admins) ficou deliberadamente de fora desta leva** e virou sessão própria de planejamento, como ele pediu — **construído em 2026-08-04/05, ver "Visão financeira para administradores" abaixo**.
 
 ### 1. Nome do cliente junto ao número do pedido
 
@@ -544,7 +544,7 @@ Vale registrar porque a investigação derrubou a correção "óbvia". Todo `.pd
 
 ### Papel `gerente` (migration `0012`)
 
-Quinto papel, pela mesma forma da `0005` (troca do `CHECK`, sem migração de dado). **Acumula tudo da `vendedora` mais a produção inteira** — entra em `SALES_ROLES` e em `PRODUCTION_ROLES`. **Não é um segundo `admin`**: fica fora de `ADMIN_ONLY` (Configurações) e, por decisão do Pablo, ficará fora da futura aba financeira — quando ela existir, é só não incluí-lo na `action` nova.
+Quinto papel, pela mesma forma da `0005` (troca do `CHECK`, sem migração de dado). **Acumula tudo da `vendedora` mais a produção inteira** — entra em `SALES_ROLES` e em `PRODUCTION_ROLES`. **Não é um segundo `admin`**: fica fora de `ADMIN_ONLY` (Configurações) e, por decisão do Pablo, fora de `FINANCE_ROLES` (a tela `/financeiro`, construída em 2026-08-04).
 
 - **`ALL_STEPS_ROLES = ['admin', 'gerente']`** (novo, nas duas cópias da matriz) é quem opera **qualquer** etapa sem passar pela atribuição individual de `user_operations`. Virou constante em vez de `role === 'admin'` solto porque essa comparação existia em dois arquivos (`backend/src/db/usersQueries.js` e `src/context/AuthProvider.jsx`) e cresceria em cada um. O sentido do gerente é cobrir quem faltou — pré-atribuir etapa por etapa anularia isso.
 - **A migration também vira a conta `caixa` de `vendedora` para `gerente`**, com `WHERE username = 'caixa'` (no-op em banco que não tenha essa conta, como o local). O **username segue `caixa`** — renomear é decisão à parte, e ela continua sendo conta compartilhada, então histórico e comentários seguem sem dizer *quem* da loja agiu.
@@ -630,6 +630,76 @@ Fecha o sexto ponto que o Pablo levantou em 2026-08-03 e que ficou esperando ele
   - **Falha de teste que era pior do que parecia**: eu comparava o texto dos rótulos com a grafia do JSX, mas **`innerText` devolve o texto já transformado pelo CSS** (`text-transform: uppercase`). Além de acusar falso negativo, isso tornava **falso-positivas** as duas checagens de "a seção some" — elas passariam mesmo com a seção presente. Corrigido comparando em minúsculas e acrescentando uma checagem de ausência no DOM. **Ao asserir sobre texto renderizado, lembre que o CSS pode tê-lo mudado.**
 
 **Pendente**: não deployado. Como é frontend puro (sem migration e sem rota nova), o `git push` sozinho basta — é a assimetria Vercel/Railway na direção segura.
+
+## Visão financeira para administradores (✅ 2026-08-04/05, três entregas)
+
+Fecha o item registrado em 2026-07-31 como "o próximo grande item". **Escopo travado pelo Pablo antes de qualquer schema, e não deve crescer sem ele pedir**: é um **relatório sobre vendas e recebimentos**, não um sistema financeiro — sem contas a pagar, sem despesas, sem fluxo de caixa, sem DRE, sem nota fiscal. Mantém a fronteira declarada no topo deste arquivo; o dinheiro só aparece na medida em que já passa pelo TexFlow (`total_value`, `amount_paid`).
+
+**Só `admin`.** `FINANCE_ROLES = ['admin']` é constante própria nas duas cópias da matriz, **e não `ADMIN_ONLY` reaproveitado**, mesmo sendo hoje o mesmo conjunto: são decisões independentes que apenas coincidem. Se um dia o gerente puder ver faturamento, mexe-se numa constante — com a compartilhada, o mesmo edit entregaria Configurações junto. O `gerente` fica de fora por decisão explícita do Pablo, mesmo acumulando vendedora + produção.
+
+### O levantamento que mudou o plano (e por que ele foi feito antes de codar)
+
+O Pablo propôs aproximar "quando o dinheiro entrou" pelo `updated_at` do pedido ou pela data do evento `payment_registered` mais recente, para não precisar de tabela de parcelas. **O levantamento contra o banco de produção mostrou que nenhuma das duas se sustenta**, e é por isso que a entrega 1 existe:
+
+- **`updated_at` é mutável.** Ele se move em qualquer edição do pedido, então corrigir um prazo em setembro tiraria a venda de agosto do total de agosto — **o número de um mês fechado mudaria para trás**. (Verificado que `recalculateOrderTotal` **não** toca nele, então editar produto não desloca; o estrago era menor do que parecia, mas continuava desqualificante.)
+- **O evento `payment_registered` tinha quatro furos**, todos visíveis em dados reais: o payload guardava o **acumulado**, não o que entrou; a sequência nem sempre cresce (um pedido real tem `640 → 320 → 640`); **o pagamento feito na própria venda não virava evento** (ver abaixo); e o log só existe desde 18/07.
+
+Conclusão levada ao Pablo: aceitar a aproximação produziria **um número errado com cara de certo**, que é o pior resultado num relatório de dinheiro. Ele escolheu corrigir o evento (em vez de trocar a métrica ou criar `order_payments`).
+
+### Entrega 1 — o evento de pagamento passa a guardar o que entrou
+
+Dois problemas em `PATCH /orders/:id`, ambos corrigidos juntos:
+
+1. **Pagamento e edição eram mutuamente exclusivos** (`isPayment = "amountPaid é o único campo"`). Como "Finalizar Pedido" manda `clientId` e `amountPaid` **juntos**, o pagamento da venda — normalmente o maior — era gravado como `order_updated`, cujo payload guarda só os *nomes* dos campos. **O valor não ia para lugar nenhum.** Em produção havia pedido com R$ 50 pagos e zero eventos de pagamento. Agora os dois eventos são **independentes**: finalizar com entrada gera os dois, que é a verdade.
+2. **O payload virou `{ previous, current, delta }`.** O delta responde "quanto entrou" direto, e **delta negativo é correção de lançamento**, distinguível de recebimento — coisa que o acumulado sozinho não permitia.
+
+Mais: **`SELECT ... FOR UPDATE`** antes do UPDATE (sem a trava, dois pagamentos simultâneos no mesmo pedido leriam o mesmo `previous` e gravariam deltas somando errado), e **valor repetido deixou de gerar evento** (antes gravava a cada clique em Salvar).
+
+**`describeEvent` (`src/utils/events.js`) entende as DUAS formas, e isso não é transitório**: os eventos gravados até 04/08/2026 têm só `amountPaid`, e ler apenas a forma nova faria o histórico real exibir "R$ 0,00".
+
+⚠️ **O deploy desta entrega inverteu a regra do projeto, de propósito.** A regra é backend primeiro, porque normalmente o front novo consome campo que só o backend novo devolve. Aqui era o contrário: com o backend novo e o front velho, o histórico mostraria "Pagamento registrado: R$ 0,00" (o front antigo lê `payload.amountPaid`, que deixou de existir); com o front novo e o backend velho, o ramo de compatibilidade renderiza certo. **Frontend primeiro era o lado inofensivo.** Vale reconhecer a inversão quando a mudança do front for puramente defensiva.
+
+### Entrega 2 — a tela
+
+`GET /finance/overview?month=YYYY-MM` (`backend/src/routes/finance.js`) e a página `/financeiro`, com item próprio no menu entre Relatórios e Configurações e `action="finance.view"` na rota.
+
+**Tela própria em vez de seção dentro de Relatórios**, por três motivos: a preferência já registrada do Pablo (tela no menu, não aba dentro de outra tela); restrição por rota é mais limpa que por seção — o precedente de gatear por seção é Configurações, e existe só porque "Minha Senha" precisa ficar acessível a todos; e Relatórios é visível às vendedoras, então um bloco admin-only ali criaria uma página com conteúdo invisível para a maioria. Contrasta de propósito com `/entregues`, que **não** ganhou `action` por ser leitura para todos — aqui a restrição é o ponto.
+
+**VENDIDO ≠ RECEBIDO, e a tela inteira preserva isso**: `sold` sai de `total_value` (o combinado) e `received` de `amount_paid` (o que entrou). **A palavra "receita" não aparece em lugar nenhum** — ela apagaria a diferença justamente onde importa; há checagem automatizada garantindo.
+
+**As ressalvas ficam coladas no número que qualificam**, não num rodapé geral: a série ser por data do pedido, e a quebra por tipo considerar só produto com preço (produto sem preço fica **de fora**, não entra como zero). A vetorização não entra na quebra por tipo, por não pertencer a um tipo de peça.
+
+**Números do momento vs. do mês**: "a receber" não pertence a mês nenhum — um pedido de julho ainda em aberto é dinheiro a receber hoje. Por isso os três cartões e a quebra por cliente são do momento, e só a série e a quebra por tipo respondem ao mês selecionado.
+
+**A lista "Pedidos em aberto" existe porque "a receber" sem os nomes é um número que ninguém sabe cobrar.**
+
+⚠️ **Fuso na virada de mês (a terceira vez que UTC morde neste projeto).** O banco roda em `Etc/UTC` e a Kavi opera em UTC−3: um pedido feito **31/07 às 21h30 no Brasil** está gravado como **01/08 00h30**. Todo agrupamento mensal converte com `AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo'`. Verificado com um pedido montado exatamente nessa borda — sem a conversão seriam 3 horas de atribuição errada em toda virada de mês.
+
+⚠️ **Ids de `bigint` viajam CRUS, como no resto da API.** O node-pg devolve `bigint` como **string**; `mapOrder` e a rota de clientes repassam sem converter. Uma primeira versão do `finance.js` fazia `Number(client_id)`, e a busca por igualdade estrita parou de casar: **toda linha da tabela por cliente saía "Cliente não informado"**. As 21 asserções passavam — o defeito só apareceu na captura de tela.
+
+### Entrega 3 — a série de recebimento por mês
+
+Sai de `product_events`, **não** de `orders.amount_paid`: a coluna só sabe o acumulado de hoje, e a pergunta é em **que mês** o dinheiro entrou.
+
+- **`jsonb_exists(payload, 'delta')` é o filtro que separa as duas eras do evento.** Os eventos anteriores à entrega 1 guardam o acumulado; somá-los como entrada contaria o mesmo dinheiro várias vezes e inflaria o mês. Ficam de fora, e a tela informa desde quando a série vale. (`jsonb_exists()` em vez do operador `?` só para não deixar um ponto de interrogação solto no SQL, que confunde quem lê esperando um placeholder.)
+- **`received: null` ≠ `0`, e a tela renderiza `—` para o primeiro.** Nos meses anteriores ao início da série o sistema realmente não guardava a data; exibir R$ 0,00 afirmaria que nada entrou, o que é falso e faria a série parecer uma queda brusca.
+- **Soma líquida dos deltas**, com `corrections` numa coluna à parte que só aparece quando existe alguma — sem ela, um mês menor que o esperado ficaria inexplicável.
+- **`sold` e `received` contam por datas diferentes** (data do pedido × data do pagamento), então um pedido de um mês pago no seguinte aparece em meses distintos nas duas colunas. A nota de rodapé diz isso, senão pareceria erro.
+- **`receiptsSince` é derivado do próprio dado**, não uma data fixa no código: ninguém precisa lembrar de atualizar constante, e num banco novo a resposta continua certa.
+- ⚠️ **`MIN()` sobre timestamp é formatado em SQL, não em JS.** O node-pg devolveria um `Date` interpretado no fuso do processo Node, e um `toISOString()` depois disso deslocaria o dia — e o mês, numa virada. Quarta aparição do mesmo tipo de armadilha.
+
+### Limitações conhecidas e aceitas
+
+- **"Recebido em julho" nunca vai existir.** O dado não foi gravado e não há de onde tirar. A tela é explícita sobre isso em vez de mostrar número inventado. Se um dia for necessário, o caminho seria a tabela `order_payments` com lançamento retroativo — a opção que o Pablo descartou por ora.
+- **Excluir um pedido apaga os eventos de pagamento dele** (`ON DELETE CASCADE` em `product_events.order_id`), então um mês já fechado pode encolher. É coerente (dinheiro de pedido excluído não deveria contar), mas é **a via que resta para um número mensal mudar retroativamente**.
+- **Metade dos pedidos "reais" em produção é lixo de verificação antigo** — `PED-2026-0025`, `0031` e `0032`, dos clientes "Cliente Verificacao ...", somando **R$ 864 de venda falsa**. O Pablo optou por deixar e decidir depois; até lá, o primeiro número que a tela mostra está contaminado.
+- **Sem filtro de período além do mês**, igual aos outros relatórios. E a quebra por cliente é de todos os períodos, não do mês — o saldo em aberto só faz sentido acumulado.
+
+### Lição de método reforçada aqui (duas vezes no mesmo dia)
+
+**`innerText` devolve o texto JÁ transformado pelo CSS.** Rótulos com `text-transform: uppercase` não casam com a grafia do JSX. Isso apareceu na verificação da ficha impressa e de novo aqui — e na ficha foi pior que um falso negativo: tornou **falso-positivas** duas checagens de "a seção some", que passariam mesmo com a seção presente. Ao asserir sobre texto renderizado, normalize a caixa ou compare no DOM.
+
+Também registrado: **não presuma a ordem de uma lista vinda da API**. `GET /orders/:id/events` devolve `ORDER BY created_at DESC` (mais novo primeiro, como a timeline precisa); um teste que usou `.at(-1)` esperando ordem crescente leu o evento errado e acusou três falhas inexistentes — foi o invariante "soma dos deltas = `amount_paid`" que denunciou o teste, não o código.
 
 ## Possível expansão futura (não é prioridade agora)
 
