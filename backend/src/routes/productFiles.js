@@ -25,7 +25,10 @@ router.get(
   asyncHandler(async (req, res) => {
     const { productId } = req.params
     const result = await pool.query(
-      'SELECT * FROM product_files WHERE product_id = $1 ORDER BY created_at',
+      `SELECT pf.* FROM product_files pf
+        WHERE pf.product_id = $1
+           OR pf.order_id = (SELECT order_id FROM products WHERE id = $1)
+        ORDER BY pf.created_at`,
       [productId]
     )
     res.json(result.rows.map(mapFile))
@@ -46,10 +49,23 @@ router.post(
       return res.status(400).json({ error: `category deve ser um de: ${CATEGORIES.join(', ')}` })
     }
 
-    const productCheck = await pool.query('SELECT id FROM products WHERE id = $1', [productId])
+    const productCheck = await pool.query('SELECT id, order_id FROM products WHERE id = $1', [
+      productId,
+    ])
     if (productCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Produto não encontrado' })
     }
+    const orderId = productCheck.rows[0].order_id
+
+    /* Quem é o dono depende da CATEGORIA (migration 0014): o layout aprovado
+       é do pedido inteiro, então grava com product_id NULL e passa a valer
+       para todas as peças; a referência continua do produto.
+
+       A rota segue sendo /products/:productId/files mesmo para o layout: o
+       produto é por onde a pessoa chega (ela está olhando uma peça), e daí
+       sai o pedido. Uma rota separada obrigaria a tela de Design a saber de
+       qual pedido é o card antes de subir, sem ganho nenhum. */
+    const belongsToOrder = category === 'layout_aprovado'
 
     const uploaded = await uploadBuffer(req.file.buffer, {
       folder: `texflow/products/${productId}`,
@@ -57,9 +73,17 @@ router.post(
 
     const file = await withTransaction(async (client) => {
       const result = await client.query(
-        `INSERT INTO product_files (product_id, category, file_name, file_url, file_type, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [productId, category, req.file.originalname, uploaded.secure_url, req.file.mimetype, uploadedBy || null]
+        `INSERT INTO product_files (order_id, product_id, category, file_name, file_url, file_type, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [
+          orderId,
+          belongsToOrder ? null : productId,
+          category,
+          req.file.originalname,
+          uploaded.secure_url,
+          req.file.mimetype,
+          uploadedBy || null,
+        ]
       )
 
       await logEvent(client, {
@@ -89,8 +113,14 @@ router.delete(
   asyncHandler(async (req, res) => {
     const { productId, fileId } = req.params
 
+    /* Aceita tanto arquivo do produto quanto do pedido a que ele pertence.
+       Para um layout, o :productId da URL é incidental — é só por onde a
+       pessoa chegou —, mas continua servindo de escopo: impede apagar um
+       arquivo de outro pedido informando um id qualquer. */
     const existing = await pool.query(
-      'SELECT * FROM product_files WHERE id = $1 AND product_id = $2',
+      `SELECT * FROM product_files
+        WHERE id = $1
+          AND (product_id = $2 OR order_id = (SELECT order_id FROM products WHERE id = $2))`,
       [fileId, productId]
     )
     if (existing.rows.length === 0) {

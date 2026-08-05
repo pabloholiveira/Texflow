@@ -254,10 +254,17 @@ export async function fetchOrders(whereSql = '', params = []) {
       )
     : { rows: [] }
 
+  /* Duas naturezas na mesma tabela (migration 0014): referência é do
+     produto, layout aprovado é do PEDIDO. Por isso a busca é por produto OU
+     por pedido, e o agrupamento abaixo entrega a cada produto os arquivos
+     dele MAIS os do pedido — assim o layout aparece em todas as peças sem
+     que nenhuma tela precise saber que ele mudou de dono. */
   const filesResult = productIds.length
     ? await pool.query(
-        'SELECT * FROM product_files WHERE product_id = ANY($1::bigint[]) ORDER BY created_at',
-        [productIds]
+        `SELECT * FROM product_files
+          WHERE product_id = ANY($1::bigint[]) OR order_id = ANY($2::bigint[])
+          ORDER BY created_at`,
+        [productIds, orderIds]
       )
     : { rows: [] }
 
@@ -275,7 +282,15 @@ export async function fetchOrders(whereSql = '', params = []) {
 
   const workflowByProduct = groupBy(workflowResult.rows, 'product_id')
   const commentsByProduct = groupBy(commentsResult.rows, 'product_id')
-  const filesByProduct = groupBy(filesResult.rows, 'product_id')
+  const filesByProduct = groupBy(
+    filesResult.rows.filter((row) => row.product_id),
+    'product_id'
+  )
+  // Arquivos do pedido (product_id NULL) valem para todos os produtos dele.
+  const orderFilesByOrder = groupBy(
+    filesResult.rows.filter((row) => !row.product_id),
+    'order_id'
+  )
   const sizesByProduct = groupBy(sizesResult.rows, 'product_id')
   const productsByOrder = groupBy(products, 'order_id')
 
@@ -287,7 +302,10 @@ export async function fetchOrders(whereSql = '', params = []) {
           product,
           workflowByProduct[product.id] || [],
           commentsByProduct[product.id] || [],
-          filesByProduct[product.id] || [],
+          [
+            ...(filesByProduct[product.id] || []),
+            ...(orderFilesByOrder[product.order_id] || []),
+          ],
           sizesByProduct[product.id] || []
         )
       )
@@ -315,8 +333,13 @@ export async function getProductById(db, productId) {
     'SELECT * FROM product_comments WHERE product_id = $1 ORDER BY created_at',
     [productId]
   )
+  // Mesma união do fetchOrders: os arquivos do produto mais os do pedido a
+  // que ele pertence (o layout aprovado, que é do pedido inteiro).
   const filesResult = await db.query(
-    'SELECT * FROM product_files WHERE product_id = $1 ORDER BY created_at',
+    `SELECT pf.* FROM product_files pf
+      WHERE pf.product_id = $1
+         OR pf.order_id = (SELECT order_id FROM products WHERE id = $1)
+      ORDER BY pf.created_at`,
     [productId]
   )
   const sizesResult = await db.query(

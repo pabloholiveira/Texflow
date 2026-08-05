@@ -204,18 +204,32 @@ CREATE TABLE IF NOT EXISTS user_operations (
 
 CREATE TABLE IF NOT EXISTS product_files (
   id BIGSERIAL PRIMARY KEY,
-  product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  -- 'referencia' = material recebido na venda (fotos, logo, tom de tecido),
-  -- disponível já no cadastro do produto; 'layout_aprovado' = PDF do mockup
-  -- aprovado pelo cliente, consultado pela produção depois. TEXT + CHECK, não
-  -- ENUM, mesma razão de stage/status acima. Sem FK pra um catálogo — só duas
-  -- categorias fixas, não justifica uma tabela própria.
+  -- As duas categorias têm DONOS diferentes (migration 0014):
+  -- 'referencia' é do PRODUTO (material que o cliente entrega para aquela
+  -- peça) e 'layout_aprovado' é do PEDIDO (o mockup aprovado vale para todas
+  -- as peças, e subir num produto faz valer em todos).
+  --
+  -- Por isso order_id é sempre preenchido e product_id é nulável — mesmo
+  -- desenho de product_events. As cascatas então fazem coisas diferentes, e é
+  -- o desejado: excluir um produto leva as referências dele, mas não o
+  -- layout; excluir o pedido leva tudo.
+  order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+  -- TEXT + CHECK, não ENUM, mesma razão de stage/status acima. Sem FK pra um
+  -- catálogo — só duas categorias fixas, não justifica uma tabela própria.
   category TEXT NOT NULL CHECK (category IN ('referencia', 'layout_aprovado')),
   file_name TEXT NOT NULL,
   file_url TEXT NOT NULL,
   file_type TEXT,
   uploaded_by TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT now()
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  -- A regra de dono fica gravada no banco, não só nas rotas: um bug que
+  -- gravasse layout com product_id voltaria em silêncio ao comportamento
+  -- antigo (o arquivo apareceria só num produto).
+  CONSTRAINT product_files_scope_check CHECK (
+    (category = 'layout_aprovado' AND product_id IS NULL)
+    OR (category = 'referencia' AND product_id IS NOT NULL)
+  )
 );
 
 -- Configurações genéricas chave-valor (hoje só o template da mensagem de

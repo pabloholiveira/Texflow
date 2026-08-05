@@ -55,6 +55,7 @@ function ProductFileList({
         return (
           <div className="product-files-group" key={category.value}>
             <h4>{category.label}</h4>
+            {category.hint && <p className="product-files-hint">{category.hint}</p>}
 
             <ul>
               {ofCategory.map((file) => (

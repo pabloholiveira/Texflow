@@ -348,3 +348,12 @@
     gap: 4px 12px;
   }
 }
+
+/* Dono do arquivo (migration 0014): o layout aprovado é do pedido, não da
+   peça. Sem esta linha, alguém excluiria "o layout desta peça" achando que
+   as outras seguiriam com o arquivo. */
+.product-files-hint {
+  margin: -4px 0 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
