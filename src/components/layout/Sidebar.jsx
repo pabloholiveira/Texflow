@@ -28,6 +28,28 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/financeiro',
+    label: 'Financeiro',
+    // Só admin (FINANCE_ROLES). O gerente não vê o item nem a tela — sem a
+    // action aqui, "sumiu o menu" viraria mistério; com ela, o item
+    // simplesmente não existe para quem não pode.
+    action: 'finance.view',
+    /* Cédula. A primeira versão era um cifrão, mas a curva do S ficava fina
+       e irregular no tamanho do menu — a silhueta retangular se reconhece de
+       relance e não se confunde com nenhum outro ícone da barra.
+
+       Proporção 19x13 e não 20x12: uma cédula fiel fica larga e baixa demais
+       ao lado dos vizinhos, que ocupam quase um quadrado, e parecia menor que
+       eles. Aqui ela preenche a caixa de 24 sem deixar de ser cédula. */
+    icon: (
+      <>
+        <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+        <circle cx="12" cy="12" r="2.8" />
+        <path d="M6 12h.01M18 12h.01" />
+      </>
+    ),
+  },
+  {
     to: '/clientes',
     label: 'Clientes',
     // `action` casa com a chave em src/data/permissions.js; sem action, o
@@ -99,21 +121,6 @@ const NAV_ITEMS = [
         <path d="M10 20V4" />
         <path d="M16 20v-7" />
         <path d="M22 20H2" />
-      </>
-    ),
-  },
-  {
-    to: '/financeiro',
-    label: 'Financeiro',
-    // Só admin (FINANCE_ROLES). O gerente não vê o item nem a tela — sem a
-    // action aqui, "sumiu o menu" viraria mistério; com ela, o item
-    // simplesmente não existe para quem não pode.
-    action: 'finance.view',
-    // Cifrão: dinheiro, e distinto das barras de Relatórios ao lado.
-    icon: (
-      <>
-        <path d="M12 2v20" />
-        <path d="M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2.2 2.8 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3" />
       </>
     ),
   },
