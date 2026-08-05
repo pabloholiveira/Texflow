@@ -18,11 +18,15 @@ import { FINANCE_ROLES } from '../auth/permissions.js'
    orders.amount_paid (o que efetivamente entrou). Misturar os dois num campo
    chamado "receita" seria o erro mais fácil de cometer nesta tela.
 
-   POR QUE A SÉRIE MENSAL É POR DATA DO PEDIDO, e não por data do pagamento:
-   até 2026-08-04 o sistema não guardava quando cada pagamento entrou — o
-   evento de pagamento só gravava o acumulado, e o pagamento feito na própria
-   venda nem virava evento. Isso foi corrigido, mas só vale daqui para
-   frente. A série de RECEBIMENTO por mês é a entrega 3, quando houver dado. */
+   DUAS SÉRIES MENSAIS, com significados diferentes e de propósito:
+   `sold` é por DATA DO PEDIDO (orders.created_at) e `received` é por DATA DO
+   PAGAMENTO (soma dos deltas em product_events). Um pedido de julho pago em
+   agosto aparece em julho na primeira e em agosto na segunda.
+
+   O recebimento por mês só existe a partir de 04/08/2026: antes disso o
+   evento de pagamento gravava apenas o acumulado, e o pagamento feito na
+   própria venda nem virava evento. Os meses anteriores vêm com `received:
+   null` — "não sabemos", que é diferente de "não entrou nada". */
 
 const router = Router()
 
@@ -38,6 +42,54 @@ const LOCAL_CREATED_AT = `(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America
 // abandonar pela metade, e /pedidos/novo cria um a cada visita.
 const REAL_ORDERS = 'NOT o.is_draft'
 
+/* Junta as duas séries pela chave do mês.
+
+   As duas listas não têm as mesmas linhas: um mês pode ter recebimento sem
+   pedido novo (o cliente quitou em agosto um pedido de julho) e vice-versa.
+   Por isso a união das chaves, e não um percorrer de uma delas.
+
+   `received` fica NULL nos meses anteriores ao início da série — ali o
+   sistema realmente não guardava a data do pagamento, e 0 diria "não entrou
+   nada", que é diferente de "não sabemos". Depois do início, mês sem
+   pagamento é 0 de verdade. */
+function mergeMonths(soldRows, receivedRows, sinceMonth) {
+  const byMonth = new Map()
+
+  for (const row of soldRows) {
+    byMonth.set(row.month, {
+      month: row.month,
+      orders: Number(row.orders),
+      sold: Number(row.sold ?? 0),
+      received: null,
+      corrections: 0,
+      payments: 0,
+    })
+  }
+
+  for (const row of receivedRows) {
+    const entry = byMonth.get(row.month) ?? {
+      month: row.month,
+      orders: 0,
+      sold: 0,
+      received: null,
+      corrections: 0,
+      payments: 0,
+    }
+    entry.received = Number(row.received ?? 0)
+    entry.corrections = Number(row.corrections ?? 0)
+    entry.payments = Number(row.payments ?? 0)
+    byMonth.set(row.month, entry)
+  }
+
+  for (const entry of byMonth.values()) {
+    if (entry.received === null && sinceMonth && entry.month >= sinceMonth) {
+      entry.received = 0
+    }
+  }
+
+  return [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month))
+}
+
 router.get(
   '/overview',
   requireRole(...FINANCE_ROLES),
@@ -45,7 +97,7 @@ router.get(
     // 'YYYY-MM'; sem o parâmetro, o mês corrente no fuso do Brasil.
     const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : null
 
-    const [totals, monthly, byType, byClient, openOrders] = await Promise.all([
+    const [totals, monthly, received, receiptsSince, byType, byClient, openOrders] = await Promise.all([
       /* Números do MOMENTO, não de um mês: "a receber" é uma dívida que
          existe hoje, e amarrá-la a um mês não faria sentido — um pedido de
          julho ainda em aberto continua sendo dinheiro a receber em agosto. */
@@ -65,13 +117,66 @@ router.get(
         SELECT
           to_char(date_trunc('month', ${LOCAL_CREATED_AT}), 'YYYY-MM') AS month,
           COUNT(*) AS orders,
-          COALESCE(SUM(o.total_value), 0) AS sold,
-          COALESCE(SUM(o.amount_paid), 0) AS received
+          COALESCE(SUM(o.total_value), 0) AS sold
         FROM orders o
         WHERE ${REAL_ORDERS}
           AND ${LOCAL_CREATED_AT} >= date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo') - interval '11 months'
         GROUP BY 1
         ORDER BY 1
+      `),
+
+      /* RECEBIDO por mês — a série que exigiu a entrega 1.
+
+         Sai de product_events, não de orders.amount_paid: a coluna só sabe o
+         acumulado de hoje, e a pergunta aqui é em QUE MÊS o dinheiro entrou.
+
+         jsonb_exists(payload,'delta') é o filtro que separa as duas eras do
+         evento. Até 04/08/2026 o payload guardava só `amountPaid`, e aquele
+         número é o ACUMULADO do pedido — somá-lo como se fosse entrada
+         inflaria o mês e contaria o mesmo dinheiro várias vezes. Esses
+         eventos ficam de fora de propósito, e a tela diz desde quando a
+         série é confiável em vez de fingir que cobre tudo.
+
+         (Uso jsonb_exists() em vez do operador `?` só para não deixar um
+         ponto de interrogação solto no SQL, que confunde quem lê esperando
+         um placeholder.)
+
+         Soma LÍQUIDA dos deltas: um delta negativo é correção de lançamento,
+         e ignorá-lo faria o mês somar dinheiro que não entrou. `corrections`
+         vem à parte para a tela conseguir explicar um mês que ficou menor do
+         que o esperado. */
+      pool.query(`
+        SELECT
+          to_char(date_trunc('month', (e.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')), 'YYYY-MM') AS month,
+          COALESCE(SUM((e.payload->>'delta')::numeric), 0) AS received,
+          COALESCE(SUM((e.payload->>'delta')::numeric) FILTER (WHERE (e.payload->>'delta')::numeric < 0), 0) AS corrections,
+          COUNT(*) AS payments
+        FROM product_events e
+        JOIN orders o ON o.id = e.order_id
+        WHERE e.event_type = 'payment_registered'
+          AND jsonb_exists(e.payload, 'delta')
+          AND ${REAL_ORDERS}
+        GROUP BY 1
+        ORDER BY 1
+      `),
+
+      /* Desde quando a série existe — derivado do próprio dado, não uma data
+         fixa no código: ninguém precisa lembrar de atualizar constante, e num
+         banco novo (ou local) a resposta continua certa.
+
+         Formatado em SQL, e não em JS: MIN() sobre timestamp devolveria um
+         Date que o node-pg interpreta no fuso do processo Node, e um
+         toISOString() depois disso poderia deslocar o dia (e o mês, numa
+         virada). Aqui a conta de fuso já foi feita e o que sai é texto. */
+      pool.query(`
+        SELECT
+          to_char(MIN(local_at), 'YYYY-MM-DD') AS since_date,
+          to_char(MIN(local_at), 'YYYY-MM') AS since_month
+        FROM (
+          SELECT (e.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') AS local_at
+          FROM product_events e
+          WHERE e.event_type = 'payment_registered' AND jsonb_exists(e.payload, 'delta')
+        ) t
       `),
 
       /* Por tipo de produto: unit_price * quantity, e NÃO um rateio de
@@ -137,12 +242,20 @@ router.get(
         outstanding: num(totals.rows[0].outstanding),
         openOrders: Number(totals.rows[0].open_count),
       },
-      monthly: monthly.rows.map((row) => ({
-        month: row.month,
-        orders: Number(row.orders),
-        sold: num(row.sold),
-        received: num(row.received),
-      })),
+      /* Desde quando o recebimento por mês é confiável. Null = ainda não há
+         nenhum pagamento no formato novo, e a tela precisa dizer isso em vez
+         de mostrar zeros que pareceriam "não recebemos nada". */
+      receiptsSince: receiptsSince.rows[0].since_date,
+
+      /* Vendido e recebido na MESMA linha do mês, mas de fontes diferentes:
+         `sold` vem de orders (data do pedido) e `received` da soma dos deltas
+         (data do pagamento). Um pedido de julho pago em agosto aparece em
+         julho na primeira coluna e em agosto na segunda — é isso que a tela
+         quer mostrar, não um erro.
+
+         `received: null` quando o mês é anterior ao início da série. Zero
+         seria mentira: significa "não sabemos", não "não entrou nada". */
+      monthly: mergeMonths(monthly.rows, received.rows, receiptsSince.rows[0].since_month),
       byType: byType.rows.map((row) => ({
         type: row.type,
         sold: num(row.sold),

@@ -14,9 +14,14 @@ import { getStageLabel } from '../../data/orderStages'
    fronteira do topo do CLAUDE.md.
 
    A distinção que a tela inteira precisa preservar: VENDIDO é o que foi
-   combinado com o cliente (total_value) e RECEBIDO é o que entrou
-   (amount_paid). São números diferentes, e chamar qualquer um dos dois de
-   "receita" apagaria a diferença justamente onde ela importa.
+   combinado com o cliente e RECEBIDO é o que entrou. São números diferentes,
+   e chamar qualquer um dos dois de "receita" apagaria a diferença justamente
+   onde ela importa.
+
+   E os dois contam por datas diferentes: vendido pela data do pedido,
+   recebido pela data do pagamento. Nos meses anteriores a 04/08/2026 o
+   recebido vem null — "não sabemos" — porque o sistema não guardava a data;
+   exibir R$ 0,00 ali afirmaria algo falso.
 
    Busca com useState/useEffect local, sem context: nenhuma outra tela
    consome estes dados — mesma decisão já tomada em Reports. */
@@ -47,6 +52,14 @@ function shiftMonth(month, step) {
   const [year, index] = month.split('-').map(Number)
   const date = new Date(year, index - 1 + step, 1)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+/* receiptsSince vem como 'YYYY-MM-DD' puro (formatado no SQL). Precisa do
+   T00:00:00 pelo mesmo motivo do prazo de entrega: sem ele o navegador lê
+   como UTC e, em UTC-3, mostra o dia anterior. */
+function formatDateOnly(value) {
+  if (!value) return ''
+  return new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR')
 }
 
 function variation(current, previous) {
@@ -81,6 +94,13 @@ function Finance() {
   const thisMonth = monthly.find((row) => row.month === month)
   const previousMonth = monthly.find((row) => row.month === shiftMonth(month, -1))
   const soldVariation = variation(thisMonth?.sold ?? 0, previousMonth?.sold ?? 0)
+
+  /* received === null significa "o sistema não guardava a data do pagamento
+     naquele mês" — bem diferente de zero. Mostrar R$ 0,00 ali seria afirmar
+     que nada entrou, que é falso e faz a série parecer uma queda brusca. */
+  const hasReceipts = Boolean(data?.receiptsSince)
+  const anyCorrection = monthly.some((row) => row.corrections < 0)
+  const money = (value) => (value === null ? '—' : formatCurrency(value))
 
   return (
     <Layout>
@@ -128,7 +148,7 @@ function Finance() {
 
           <section className="finance-panel">
             <div className="finance-panel-header">
-              <h2>Vendido por mês</h2>
+              <h2>Vendido e recebido por mês</h2>
               <div className="finance-month-nav">
                 <button onClick={() => setMonth(shiftMonth(month, -1))}>
                   ← Mês anterior
@@ -167,12 +187,16 @@ function Finance() {
                 </strong>
               </div>
               <div>
+                <span className="finance-card-label">Recebido no mês</span>
+                <strong>{money(thisMonth?.received ?? null)}</strong>
+              </div>
+              <div>
                 <span className="finance-card-label">Pedidos no mês</span>
                 <strong>{thisMonth?.orders ?? 0}</strong>
               </div>
               <div>
                 <span className="finance-card-label">
-                  Mês anterior ({monthLabel(shiftMonth(month, -1))})
+                  Vendido no mês anterior ({monthLabel(shiftMonth(month, -1))})
                 </span>
                 <strong>{formatCurrency(previousMonth?.sold ?? 0)}</strong>
               </div>
@@ -187,12 +211,16 @@ function Finance() {
                     <th>Mês</th>
                     <th>Pedidos</th>
                     <th>Vendido</th>
+                    <th>Recebido</th>
+                    {anyCorrection && <th>Correções</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {monthly.length === 0 && (
                     <tr>
-                      <td colSpan={3}>Nenhum pedido nos últimos 12 meses.</td>
+                      <td colSpan={anyCorrection ? 5 : 4}>
+                        Nenhum pedido nos últimos 12 meses.
+                      </td>
                     </tr>
                   )}
                   {monthly
@@ -206,19 +234,43 @@ function Finance() {
                         <td>{monthLabel(row.month)}</td>
                         <td>{row.orders}</td>
                         <td>{formatCurrency(row.sold)}</td>
+                        <td>{money(row.received)}</td>
+                        {anyCorrection && (
+                          <td className={row.corrections < 0 ? 'finance-owed' : ''}>
+                            {row.corrections < 0 ? formatCurrency(row.corrections) : '—'}
+                          </td>
+                        )}
                       </tr>
                     ))}
                 </tbody>
               </table>
             </div>
 
-            {/* A série é por DATA DO PEDIDO, e a tela precisa dizer isso: até
-                04/08/2026 o sistema não guardava quando cada pagamento
-                entrou, então "recebido no mês" ainda não existe. */}
+            {/* As duas colunas têm significados diferentes, e a tela tem que
+                dizer isso: "Vendido" é por data do pedido, "Recebido" é por
+                data do pagamento. O mesmo dinheiro pode cair em meses
+                diferentes nas duas. */}
             <p className="finance-note">
-              A série é por data do pedido. O recebimento mês a mês ainda não
-              aparece aqui: o valor pago só passou a ser registrado com data em
-              04/08/2026, então os meses anteriores não têm essa informação.
+              <strong>Vendido</strong> conta pela data do pedido;{' '}
+              <strong>Recebido</strong>, pela data do pagamento — um pedido de
+              um mês pago no seguinte aparece em cada coluna num mês diferente.
+              {hasReceipts ? (
+                <>
+                  {' '}
+                  O recebimento por mês passou a ser registrado em{' '}
+                  {formatDateOnly(data.receiptsSince)}; antes disso o sistema
+                  não guardava a data do pagamento, e os meses anteriores
+                  aparecem como <strong>—</strong> (não sabemos), e não como R$
+                  0,00.
+                </>
+              ) : (
+                <>
+                  {' '}
+                  Ainda não há nenhum pagamento registrado com data, então a
+                  coluna Recebido aparece como <strong>—</strong> em todos os
+                  meses.
+                </>
+              )}
             </p>
           </section>
 

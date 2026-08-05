@@ -85,7 +85,7 @@
 
 .finance-month-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   padding: 16px 0 20px;
 }
@@ -96,10 +96,14 @@
   margin-top: 4px;
 }
 
+/* Em bloco, e não ao lado do valor: com quatro colunas no resumo a frase
+   "▼ 39% vs. mês anterior" quebrava no meio e desalinhava a célula. Numa
+   linha própria a quebra é previsível. */
 .finance-variation {
+  display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  margin-left: 8px;
+  margin-top: 2px;
 }
 
 .finance-up {
