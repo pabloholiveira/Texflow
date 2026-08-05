@@ -66,6 +66,7 @@ const REAL_ORDERS = 'NOT o.is_draft AND o.cancelled_at IS NULL'
    por isso que os rótulos dizem qual é qual. */
 const PERIOD_WINDOWS = {
   all: 'TRUE',
+  '7d': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '7 days'`,
   '30d': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '30 days'`,
   '3m': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '3 months'`,
   '12m': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '12 months'`,

@@ -16,6 +16,7 @@ import Select from '../../components/ui/Select'
    'all' é o padrão para quem abre a tela ver o mesmo de antes. */
 const PERIODS = [
   { value: 'all', label: 'Tudo', short: 'total' },
+  { value: '7d', label: 'Últimos 7 dias', short: 'últimos 7 dias' },
   { value: '30d', label: 'Últimos 30 dias', short: 'últimos 30 dias' },
   { value: '3m', label: 'Últimos 3 meses', short: 'últimos 3 meses' },
   { value: '12m', label: 'Últimos 12 meses', short: 'últimos 12 meses' },
