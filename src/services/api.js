@@ -122,8 +122,16 @@ export const reportsApi = {
 export const financeApi = {
   // `month` opcional ('YYYY-MM'): filtra a quebra por tipo de produto. Os
   // números do momento (a receber, por cliente) ignoram o mês de propósito.
-  overview: (month) =>
-    request(`/finance/overview${month ? `?month=${month}` : ''}`),
+  // `month` filtra a quebra por tipo; `period` filtra os cartões do topo.
+  // São dois recortes independentes de propósito — ver o comentário em
+  // backend/src/routes/finance.js.
+  overview: (month, period) => {
+    const params = new URLSearchParams()
+    if (month) params.set('month', month)
+    if (period && period !== 'all') params.set('period', period)
+    const query = params.toString()
+    return request(`/finance/overview${query ? `?${query}` : ''}`)
+  },
 }
 
 export const usersApi = {

@@ -5,6 +5,26 @@ import { useClients } from '../../context/clientsContext'
 import { getClientNameById } from '../../data/clients'
 import { formatCurrency } from '../../utils/currency'
 import { getStageLabel } from '../../data/orderStages'
+import Select from '../../components/ui/Select'
+
+/* Períodos dos cartões do topo. O recorte é pela DATA DO PEDIDO — os dois
+   cartões respondem "dos pedidos feitos nesta janela, vendemos X e
+   recebemos Y". Não é fluxo de caixa: o valor pago só passou a ser gravado
+   com data em 04/08/2026, então somar pagamentos datados marcaria R$ 0,00
+   enquanto a Kavi já recebeu de fato. Decisão do Pablo.
+
+   'all' é o padrão para quem abre a tela ver o mesmo de antes. */
+const PERIODS = [
+  { value: 'all', label: 'Tudo', short: 'total' },
+  { value: '30d', label: 'Últimos 30 dias', short: 'últimos 30 dias' },
+  { value: '3m', label: 'Últimos 3 meses', short: 'últimos 3 meses' },
+  { value: '12m', label: 'Últimos 12 meses', short: 'últimos 12 meses' },
+  { value: 'year', label: 'Este ano', short: 'este ano' },
+]
+
+function periodShort(value) {
+  return PERIODS.find((p) => p.value === value)?.short ?? 'total'
+}
 
 /* Visão financeira — só admin (a rota carrega action="finance.view", e o
    servidor barra de novo em FINANCE_ROLES).
@@ -70,6 +90,7 @@ function variation(current, previous) {
 function Finance() {
   const { clients } = useClients()
   const [month, setMonth] = useState(currentMonth)
+  const [period, setPeriod] = useState('all')
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -79,7 +100,7 @@ function Finance() {
     // setState depois de um await ali dentro viola react-hooks/set-state-in-
     // effect. Mesmo formato de Reports e OrderHistory.
     financeApi
-      .overview(month)
+      .overview(month, period)
       .then((result) => {
         setData(result)
         setError(null)
@@ -88,7 +109,7 @@ function Finance() {
       // Só desliga, nunca religa: numa troca de mês os números antigos ficam
       // na tela até os novos chegarem, em vez de piscar "Carregando".
       .finally(() => setIsLoading(false))
-  }, [month])
+  }, [month, period])
 
   const monthly = data?.monthly ?? []
   const thisMonth = monthly.find((row) => row.month === month)
@@ -116,25 +137,48 @@ function Finance() {
 
       {data && (
         <>
-          {/* Números do momento. "A receber" não pertence a mês nenhum: um
-              pedido de julho ainda em aberto é dinheiro a receber hoje. */}
+          <div className="finance-period">
+            <Select
+              label="Período"
+              name="period"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              options={PERIODS}
+            />
+          </div>
+
+          {/* Os dois primeiros cartões respondem ao período, pela data do
+              pedido. "A receber" NÃO — é dívida de hoje, não fluxo: um
+              pedido de julho ainda em aberto é dinheiro a receber agora, e
+              escondê-lo num recorte de 30 dias faria a cobrança perder o
+              que importa. O rótulo de cada um diz a qual grupo pertence. */}
           <section className="finance-cards">
             <div className="finance-card">
-              <span className="finance-card-label">Vendido (total)</span>
+              <span className="finance-card-label">
+                Vendido ({periodShort(period)})
+              </span>
               <strong className="finance-card-value">
                 {formatCurrency(data.totals.sold)}
               </strong>
-              <span className="finance-card-hint">Soma de todos os pedidos</span>
+              <span className="finance-card-hint">
+                {data.totals.ordersInPeriod === 1
+                  ? '1 pedido no período'
+                  : `${data.totals.ordersInPeriod} pedidos no período`}
+              </span>
             </div>
             <div className="finance-card">
-              <span className="finance-card-label">Recebido (total)</span>
+              <span className="finance-card-label">
+                Recebido ({periodShort(period)})
+              </span>
               <strong className="finance-card-value">
                 {formatCurrency(data.totals.received)}
               </strong>
-              <span className="finance-card-hint">O que já entrou</span>
+              <span className="finance-card-hint">
+                Já pago desses mesmos pedidos
+              </span>
             </div>
             <div className="finance-card finance-card-alert">
-              <span className="finance-card-label">A receber</span>
+              <span className="finance-card-label">A receber (hoje)</span>
               <strong className="finance-card-value">
                 {formatCurrency(data.totals.outstanding)}
               </strong>
@@ -142,6 +186,7 @@ function Finance() {
                 {data.totals.openOrders === 1
                   ? '1 pedido em aberto'
                   : `${data.totals.openOrders} pedidos em aberto`}
+                {' '}— não muda com o período
               </span>
             </div>
           </section>

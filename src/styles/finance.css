@@ -160,3 +160,17 @@
     justify-content: space-between;
   }
 }
+
+/* Seletor de período dos cartões do topo. Fica ACIMA deles e não dentro do
+   painel mensal de propósito: o período e a navegação por mês são recortes
+   independentes, e colar um no outro sugeriria que um governa o outro. */
+.finance-period {
+  max-width: 260px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .finance-period {
+    max-width: none;
+  }
+}

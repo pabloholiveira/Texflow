@@ -48,6 +48,30 @@ const LOCAL_CREATED_AT = `(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America
    TexFlow não modela devolução. */
 const REAL_ORDERS = 'NOT o.is_draft AND o.cancelled_at IS NULL'
 
+/* Janelas do filtro de período dos cartões do topo (2026-08-05).
+
+   Mapa fechado, e não interpolação do que vem na query string: o valor
+   entra direto no SQL, então aceitar texto livre aqui seria injeção.
+   Chave desconhecida cai em 'all', que é o comportamento de antes.
+
+   O recorte é pela DATA DO PEDIDO, decisão do Pablo. A alternativa era
+   somar os pagamentos datados (fluxo de caixa de verdade), mas o valor
+   pago só passou a ser gravado com data em 04/08/2026 e em produção ainda
+   não há nenhum — os cartões marcariam R$ 0,00 enquanto a Kavi já recebeu
+   de fato. Assim os dois cartões significam a mesma coisa: "dos pedidos
+   feitos nesta janela, vendemos X e recebemos Y".
+
+   NOTA: a coluna "Recebido" da tabela mensal continua sendo por data do
+   PAGAMENTO. São dois sentidos convivendo na mesma tela de propósito, e é
+   por isso que os rótulos dizem qual é qual. */
+const PERIOD_WINDOWS = {
+  all: 'TRUE',
+  '30d': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '30 days'`,
+  '3m': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '3 months'`,
+  '12m': `${LOCAL_CREATED_AT} >= (now() AT TIME ZONE 'America/Sao_Paulo') - interval '12 months'`,
+  year: `${LOCAL_CREATED_AT} >= date_trunc('year', now() AT TIME ZONE 'America/Sao_Paulo')`,
+}
+
 /* Junta as duas séries pela chave do mês.
 
    As duas listas não têm as mesmas linhas: um mês pode ter recebimento sem
@@ -102,6 +126,8 @@ router.get(
   asyncHandler(async (req, res) => {
     // 'YYYY-MM'; sem o parâmetro, o mês corrente no fuso do Brasil.
     const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : null
+    const period = PERIOD_WINDOWS[req.query.period] ? req.query.period : 'all'
+    const periodWindow = PERIOD_WINDOWS[period]
 
     const [totals, monthly, received, receiptsSince, byType, byClient, openOrders] = await Promise.all([
       /* Números do MOMENTO, não de um mês: "a receber" é uma dívida que
@@ -109,8 +135,13 @@ router.get(
          julho ainda em aberto continua sendo dinheiro a receber em agosto. */
       pool.query(`
         SELECT
-          COALESCE(SUM(o.total_value), 0) AS sold_total,
-          COALESCE(SUM(o.amount_paid), 0) AS received_total,
+          -- Vendido e recebido respondem ao período (pela data do pedido)...
+          COALESCE(SUM(o.total_value) FILTER (WHERE ${periodWindow}), 0) AS sold_total,
+          COALESCE(SUM(o.amount_paid) FILTER (WHERE ${periodWindow}), 0) AS received_total,
+          COUNT(*) FILTER (WHERE ${periodWindow}) AS orders_in_period,
+          -- ...mas "a receber" NÃO: é dívida de hoje, não fluxo. Um pedido de
+          -- julho ainda em aberto é dinheiro a receber agora, e escondê-lo
+          -- num recorte de 30 dias faria a cobrança perder o que importa.
           COALESCE(SUM(o.total_value - o.amount_paid) FILTER (WHERE o.amount_paid < o.total_value), 0) AS outstanding,
           COUNT(*) FILTER (WHERE o.amount_paid < o.total_value) AS open_count
         FROM orders o
@@ -242,9 +273,11 @@ router.get(
 
     res.json({
       month,
+      period,
       totals: {
         sold: num(totals.rows[0].sold_total),
         received: num(totals.rows[0].received_total),
+        ordersInPeriod: Number(totals.rows[0].orders_in_period),
         outstanding: num(totals.rows[0].outstanding),
         openOrders: Number(totals.rows[0].open_count),
       },
