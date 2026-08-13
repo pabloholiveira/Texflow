@@ -594,7 +594,7 @@ O Pablo relatou o modal "demorando pra fechar". A investigação mostrou que **e
 
 **Passos operacionais que sobraram para o Pablo** (não são código): atribuir "Botão" à ketylin/simone em Configurações → Usuários → Etapas — enquanto não atribuir, elas seguem barradas, porque **lista vazia nega por desenho**; e a `caixa` precisa deslogar/logar para o papel novo valer.
 
-## Ficha de produção impressa: redesenho visual (✅ 2026-08-04) — não deployado
+## Ficha de produção impressa: redesenho visual (✅ 2026-08-04, deployado)
 
 Fecha o sexto ponto que o Pablo levantou em 2026-08-03 e que ficou esperando ele mandar o print do que não gostou. Partiu de uma **imagem de referência dele** (visual de documento oficial: cabeçalho com marca, prazo em moldura, blocos rotulados), no lugar das tabelas de borda uniforme que havia antes. **Zero mudança em banco, API e rotas** — todo o conteúdo novo já existia nos dados.
 
@@ -630,7 +630,7 @@ Fecha o sexto ponto que o Pablo levantou em 2026-08-03 e que ficou esperando ele
   - **Dois defeitos só apareceram OLHANDO a captura, com as asserções passando**: os rótulos de seção colados na caixa de cima (faltava respiro antes do bloco, não depois) e **o ícone da Costura ilegível no tamanho de impressão** — a primeira versão, com o corpo como retângulo arredondado, virava um risco com uma caixinha; redesenhado como silhueta em L (mesa, base, coluna+braço, agulha).
   - **Falha de teste que era pior do que parecia**: eu comparava o texto dos rótulos com a grafia do JSX, mas **`innerText` devolve o texto já transformado pelo CSS** (`text-transform: uppercase`). Além de acusar falso negativo, isso tornava **falso-positivas** as duas checagens de "a seção some" — elas passariam mesmo com a seção presente. Corrigido comparando em minúsculas e acrescentando uma checagem de ausência no DOM. **Ao asserir sobre texto renderizado, lembre que o CSS pode tê-lo mudado.**
 
-**Pendente**: não deployado. Como é frontend puro (sem migration e sem rota nova), o `git push` sozinho basta — é a assimetria Vercel/Railway na direção segura.
+**Deployado**: por ser frontend puro (sem migration e sem rota nova), subiu no `git push` que veio junto do trabalho seguinte — é a assimetria Vercel/Railway na direção segura. Confirmado em 2026-08-13 baixando o bundle publicado.
 
 ## Visão financeira para administradores (✅ 2026-08-04/05, três entregas)
 
