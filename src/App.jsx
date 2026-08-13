@@ -20,6 +20,7 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import NewOrder from './pages/NewOrder'
 import PrintSheet from './pages/PrintSheet'
+import ProductView from './pages/ProductView'
 
 function App() {
   return (
@@ -42,6 +43,11 @@ function App() {
                       `action`: quem enxerga a peça pode imprimi-la. */}
                   <Route path="/pedidos/:id/fichas" element={<ProtectedRoute><PrintSheet /></ProtectedRoute>} />
                   <Route path="/pedidos/:id/produtos/:productId/ficha" element={<ProtectedRoute><PrintSheet /></ProtectedRoute>} />
+
+                  {/* Destino do QR impresso na ficha. Sem `action` pela mesma
+                      razão de /pedidos: é leitura, e quem está na máquina com
+                      a peça na mão é justamente quem precisa abrir. */}
+                  <Route path="/produtos/:productId" element={<ProtectedRoute><ProductView /></ProtectedRoute>} />
 
                   <Route path="/clientes" element={<ProtectedRoute action="clients.manage"><Clients /></ProtectedRoute>} />
                   {/* /design e /producao ficam abertas a todo mundo de propósito:

@@ -1,5 +1,6 @@
 import Logo from './Logo'
 import OperationIcon from './OperationIcon'
+import QrCode from './QrCode'
 
 // product.sizes já chega da API como lista na ordem canônica dos tamanhos
 // (sizesToList/sizesToMap são a fronteira do formulário, não daqui).
@@ -82,6 +83,35 @@ function ProductSheet({ order, product, clientName, clientPhone }) {
       <header className="sheet-header">
         <Logo className="sheet-brand" />
 
+        {/* O QR é a identidade DESTA PEÇA — por peça, e não por pedido, porque
+            é a peça que anda fisicamente separada pela fábrica (a camiseta na
+            Costura enquanto o boné já está no Bordado). Uma folha por pedido
+            teria o mesmo código em papéis diferentes e a leitura não saberia
+            qual peça está na mão.
+
+            Aponta para uma URL completa em vez de um código interno: assim a
+            câmera NATIVA do celular já abre a peça, sem app, sem biblioteca de
+            leitura e sem pedir permissão de câmera dentro do sistema. Se um dia
+            a Kavi comprar um leitor USB 2D, ele "digita" a mesma URL num campo
+            de busca — os dois caminhos servem sem escolher agora.
+
+            window.location.origin, e não o domínio escrito à mão: uma ficha
+            impressa do ambiente local aponta para o local e a de produção para
+            produção, sem variável de ambiente nova.
+
+            MORA NO CABEÇALHO por medição, não por estética: numa linha própria
+            ele custava ~22mm de altura e jogava a ficha para uma segunda
+            página assim que a peça tivesse 6 etapas. Aqui ele divide a altura
+            com a marca e a caixa de prazo, que já existiam. */}
+        {/* Sem legenda de "aponte a câmera": ela custava ~3,6mm de altura, que
+            é um terço de uma linha do checklist, e QR é vocabulário universal
+            no Brasil desde o PIX. O espaço vale mais que a instrução. */}
+        <QrCode
+          value={`${window.location.origin}/produtos/${product.id}`}
+          className="sheet-qr-code"
+          title={`QR da peça ${product.type}`}
+        />
+
         {/* Prazo em caixa própria: é o dado que a fábrica olha primeiro. */}
         <div className="sheet-deadline">
           <SheetIcon className="sheet-deadline-icon">{CALENDAR_ICON}</SheetIcon>
@@ -148,19 +178,32 @@ function ProductSheet({ order, product, clientName, clientPhone }) {
           é instrução para a costura, posicionamento é instrução para
           bordado/silk/DTF. Emendados, cada setor teria que ler a instrução do
           outro para achar a sua — e é justamente o posicionamento o que mais
-          gera dúvida no chão de fábrica se não estiver junto da peça. */}
-      {product.observations && (
-        <section className="sheet-section">
-          <h3 className="sheet-section-title">Observações do modelo</h3>
-          <p className="sheet-observations">{product.observations}</p>
-        </section>
-      )}
+          gera dúvida no chão de fábrica se não estiver junto da peça.
 
-      {product.printObservations && (
-        <section className="sheet-section">
-          <h3 className="sheet-section-title">Estampa e bordado</h3>
-          <p className="sheet-observations">{product.printObservations}</p>
-        </section>
+          LADO A LADO, e não empilhados, por uma razão medida: empilhados eles
+          custavam 60mm de altura (48 de conteúdo + 12 de margens) e jogavam a
+          ficha para uma segunda página. Na mesma linha custam 30mm — e o
+          arranjo ainda combina com o resto da folha, onde Cor/Tecido/Modelo/
+          Quantidade já dividem uma linha por serem informações irmãs.
+
+          Com só um dos dois preenchido, o auto-fit do grid faz ele ocupar a
+          linha inteira, em vez de deixar meia folha vazia ao lado. */}
+      {(product.observations || product.printObservations) && (
+        <div className="sheet-notes-row">
+          {product.observations && (
+            <section className="sheet-section">
+              <h3 className="sheet-section-title">Observações do modelo</h3>
+              <p className="sheet-observations">{product.observations}</p>
+            </section>
+          )}
+
+          {product.printObservations && (
+            <section className="sheet-section">
+              <h3 className="sheet-section-title">Estampa e bordado</h3>
+              <p className="sheet-observations">{product.printObservations}</p>
+            </section>
+          )}
+        </div>
       )}
 
       {product.needsVectorization && (

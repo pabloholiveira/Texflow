@@ -125,6 +125,26 @@
   border-right: 1px solid #000;
 }
 
+/* QR da peça, no cabeçalho: `margin-left: auto` o encosta à direita, deixando
+   a caixa de prazo no canto — a marca fica à esquerda, como na referência.
+
+   24mm SAIU DE MEDIÇÃO, não de gosto. A URL cabe em 37x37 módulos no nível de
+   correção Q, o que dá 0,65mm por módulo neste tamanho — folgado para a
+   câmera de um celular com a folha na mão, e ainda com os 25% de tolerância a
+   mancha e vinco que uma ficha circulando pela fábrica exige (ela pode ir à
+   mão de costureira externa). O nível M num tamanho equivalente daria
+   praticamente o mesmo módulo com metade da tolerância, então Q sai de graça.
+
+   Não passa de 24mm porque a ficha precisa caber em UMA página A4: cada
+   milímetro aqui disputa espaço com as etapas de produção, que crescem
+   conforme a peça tem mais operações. */
+.sheet-qr-code {
+  margin-left: auto;
+  width: 24mm;
+  height: 24mm;
+  display: block;
+}
+
 .sheet-parties .sheet-field:first-child {
   flex: 1;
   padding-right: 5mm;
@@ -168,6 +188,20 @@
    "PRODUTO" cola na linha do cliente e a folha vira um bloco só. */
 .sheet-section {
   margin: 6mm 0 0;
+}
+
+/* As duas observações dividem uma linha. `auto-fit` com `minmax(0, 1fr)` é o
+   que faz um bloco sozinho ocupar a largura inteira — com `1fr 1fr` fixo,
+   uma peça sem estampa imprimiria metade da linha em branco.
+
+   O minmax começa em 0, e não em `auto`: `auto` usa o conteúdo como largura
+   mínima, então uma palavra longa (um nome de arte, por exemplo) empurraria a
+   coluna e estouraria a folha em vez de quebrar a linha. */
+.sheet-notes-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 5mm;
+  align-items: start;
 }
 
 .sheet-section-title {
@@ -220,7 +254,12 @@
   border: 1px solid #000;
   padding: 4mm;
   margin: 0;
-  min-height: 18mm;
+  /* O piso era 18mm de quando havia UMA caixa ocupando a folha inteira. Com
+     as duas dividindo a linha, 18mm em cada uma vira papel em branco: a
+     altura da linha é a da caixa mais alta, e uma observação de uma linha não
+     precisa de três. 12mm ainda garante que a caixa pareça um campo, e não
+     uma tarja, quando o texto é curto. */
+  min-height: 12mm;
   font-size: 12pt;
   line-height: 1.5;
   white-space: pre-wrap;

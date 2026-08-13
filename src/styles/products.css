@@ -357,3 +357,23 @@
   font-size: 0.8rem;
   color: var(--color-text-secondary);
 }
+
+/* Página da peça (/produtos/:id), destino do QR da ficha impressa.
+
+   O ProductDetailPanel nasceu para viver DENTRO de um modal, que já dava a
+   superfície branca e o respiro. Numa página inteira ele ficaria solto sobre
+   o fundo, então o cartão vem daqui — mesmos tokens de .products-panel, para
+   a tela parecer parte do sistema e não uma página avulsa. */
+.product-view-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-card);
+}
+
+.product-view-empty {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
