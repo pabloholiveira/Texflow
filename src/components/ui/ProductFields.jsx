@@ -145,6 +145,18 @@ function ProductFields({ product, onChange }) {
         name="observations"
       />
 
+      {/* Campo separado do de cima, e o par de rótulos é o que faz a divisão
+          ficar óbvia para quem preenche: um é instrução de costura, o outro é
+          instrução de bordado/silk/DTF. Continua texto livre — o domínio
+          decidiu não estruturar posicionamento em lado/frente/costas. */}
+      <Input
+        label="Observações de estampa e bordado"
+        placeholder="Ex: logo na frente, número nas costas"
+        value={product.printObservations}
+        onChange={onChange}
+        name="printObservations"
+      />
+
       <div className="size-grid-field">
         <span className="size-grid-label">Grade de tamanhos</span>
         <p className="size-grid-help">

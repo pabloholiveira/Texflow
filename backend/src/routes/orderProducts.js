@@ -30,6 +30,7 @@ router.post(
       fabric,
       quantity,
       observations,
+      printObservations = null,
       operations = [],
       unitPrice = null,
       needsVectorization = false,
@@ -81,8 +82,8 @@ router.post(
 
       const inserted = await client.query(
         `INSERT INTO products
-           (order_id, type, model, color, fabric, quantity, observations, unit_price, needs_vectorization, vectorization_price, design_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+           (order_id, type, model, color, fabric, quantity, observations, print_observations, unit_price, needs_vectorization, vectorization_price, design_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
         [
           orderId,
           type,
@@ -91,6 +92,7 @@ router.post(
           fabric,
           sizesTotal > 0 ? sizesTotal : quantity,
           observations,
+          printObservations,
           unitPrice,
           needsVectorization,
           vectorizationPrice,

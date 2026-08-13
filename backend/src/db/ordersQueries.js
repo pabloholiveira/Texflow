@@ -166,6 +166,10 @@ export function mapProduct(
     // não no banco.
     sizes: sizeRows.map((row) => ({ size: row.size, quantity: row.quantity })),
     observations: productRow.observations,
+    // Onde vai estampa/bordado (migration 0015). Campo separado de
+    // `observations` porque tem outro leitor: aquele é instrução de costura,
+    // este é de bordado/silk/DTF.
+    printObservations: productRow.print_observations,
     designStatus: productRow.design_status,
     designIsRework: productRow.design_is_rework,
     designConcludedAt: productRow.design_concluded_at,

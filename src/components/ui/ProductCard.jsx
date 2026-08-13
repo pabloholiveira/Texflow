@@ -94,8 +94,15 @@ function ProductCard({ product, orderId, onRemove, onEdit, onEditInfo, onOpenCom
 
       {product.observations && (
         <div className="product-card-notes">
-          <span>Observações</span>
+          <span>Observações do modelo</span>
           <p>{product.observations}</p>
+        </div>
+      )}
+
+      {product.printObservations && (
+        <div className="product-card-notes">
+          <span>Estampa e bordado</span>
+          <p>{product.printObservations}</p>
         </div>
       )}
 

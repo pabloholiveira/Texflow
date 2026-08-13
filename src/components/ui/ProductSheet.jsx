@@ -144,13 +144,22 @@ function ProductSheet({ order, product, clientName, clientPhone }) {
         </div>
       </section>
 
+      {/* Dois blocos rotulados, e não um texto corrido: detalhe de construção
+          é instrução para a costura, posicionamento é instrução para
+          bordado/silk/DTF. Emendados, cada setor teria que ler a instrução do
+          outro para achar a sua — e é justamente o posicionamento o que mais
+          gera dúvida no chão de fábrica se não estiver junto da peça. */}
       {product.observations && (
         <section className="sheet-section">
-          <h3 className="sheet-section-title">Observações</h3>
-          {/* Onde vive "bordado no peito esquerdo", "silk frente e manga" —
-              texto livre por decisão de domínio, e o que mais gera dúvida no
-              chão de fábrica se não estiver junto da peça. */}
+          <h3 className="sheet-section-title">Observações do modelo</h3>
           <p className="sheet-observations">{product.observations}</p>
+        </section>
+      )}
+
+      {product.printObservations && (
+        <section className="sheet-section">
+          <h3 className="sheet-section-title">Estampa e bordado</h3>
+          <p className="sheet-observations">{product.printObservations}</p>
         </section>
       )}
 

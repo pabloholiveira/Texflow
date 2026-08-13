@@ -60,8 +60,17 @@ function ProductDetailPanel({ product, orderNumber, clientName, orderId }) {
 
       {product.observations && (
         <div className="product-detail-observations">
-          <span>Observações</span>
+          <span>Observações do modelo</span>
           <p>{product.observations}</p>
+        </div>
+      )}
+
+      {/* Bloco próprio, não emendado no de cima: quem abre este painel no
+          bordado ou no silk está procurando exatamente esta linha. */}
+      {product.printObservations && (
+        <div className="product-detail-observations">
+          <span>Estampa e bordado</span>
+          <p>{product.printObservations}</p>
         </div>
       )}
 

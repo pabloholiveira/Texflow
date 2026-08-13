@@ -14,6 +14,7 @@ const emptyProduct = {
   // vira lista na hora de mandar pra API — ver src/data/sizes.js.
   sizes: {},
   observations: '',
+  printObservations: '',
   unitPrice: '',
   needsVectorization: false,
   vectorizationPrice: '',
@@ -215,6 +216,7 @@ export function useProductList(orderId) {
       quantity: target.quantity,
       sizes: sizesToMap(target.sizes),
       observations: target.observations || '',
+      printObservations: target.printObservations || '',
       unitPrice: target.unitPrice ?? '',
       needsVectorization: target.needsVectorization,
       vectorizationPrice: target.vectorizationPrice ?? '',

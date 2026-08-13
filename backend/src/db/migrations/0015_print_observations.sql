@@ -1,0 +1,27 @@
+-- Observações de estampa e bordado, campo próprio (2026-08-13).
+--
+-- POR QUE NÃO COUBE EM products.observations, que já é texto livre: o campo
+-- existente se chama "Observações do modelo" no formulário, com placeholder
+-- "Ex: recorte lateral branco". A interface vinha dizendo à vendedora que
+-- ali é lugar de detalhe de costura — e ela obedeceu: no banco de produção,
+-- os três produtos preenchidos traziam "Manga curta, gola tradicional",
+-- "Manga curta, frentinha em branco" e "Manga curta, gola tradicional".
+-- Nenhum posicionamento de estampa. Ou seja, esta informação simplesmente
+-- não estava sendo registrada em lugar nenhum.
+--
+-- (O CLAUDE.md descrevia products.observations como a casa do "bordado no
+-- peito esquerdo", e havia até um comentário nesse sentido no ProductSheet —
+-- a documentação e a interface se contradiziam, e a interface ganhou.)
+--
+-- Separar também separa LEITORES: detalhe de modelo é instrução para a
+-- costura, posicionamento é instrução para bordado/silk/DTF. Num parágrafo
+-- só, cada setor precisa ler a instrução do outro para achar a sua — e na
+-- ficha impressa os dois viram blocos rotulados, com lugar fixo para olhar.
+--
+-- ISTO NÃO REABRE A DECISÃO DE DOMÍNIO de não estruturar posicionamento:
+-- continua sendo UM campo de texto livre ("logo na frente, número nas
+-- costas"), não campos de lado/posição/frente-costas. E não ressuscita a
+-- "Estampa" genérica como operação: quais operações a peça precisa segue
+-- sendo Bordado/Silk/DTF, independentes, no catálogo `operations`. Esta
+-- coluna guarda só o ONDE, não o QUÊ.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS print_observations TEXT;

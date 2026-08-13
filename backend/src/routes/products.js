@@ -217,6 +217,7 @@ router.patch(
       fabric: 'fabric',
       quantity: 'quantity',
       observations: 'observations',
+      printObservations: 'print_observations',
       unitPrice: 'unit_price',
       needsVectorization: 'needs_vectorization',
       vectorizationPrice: 'vectorization_price',
