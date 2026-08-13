@@ -1,19 +1,4 @@
-/* Marca TexFlow: máquina de costura em contorno (escolha do Pablo entre
-   variantes, na passada de polish de 2026-07-10).
 
-   Extraído em 2026-08-04 porque o mesmo SVG estava copiado byte a byte
-   entre Login e Sidebar, e a ficha de produção impressa seria a terceira
-   cópia — mudar o logo viraria três edições.
-
-   As classes vêm por prop, e não fixas aqui, para que login.css,
-   sidebar.css e print.css continuem donos da própria aparência: este
-   componente entrega a marcação, não o estilo. Cada tela passa seu
-   prefixo (`login-brand`, `sidebar-brand`, `sheet-brand`) e as regras que
-   já existiam seguem valendo sem precisar mudar de nome.
-
-   O `stroke="currentColor"` é o que faz a mesma marca servir para a
-   sidebar branca, o login e o papel preto-no-branco da ficha — quem
-   define a cor é o CSS de quem usa. */
 function Logo({ className }) {
   return (
     <div className={className}>

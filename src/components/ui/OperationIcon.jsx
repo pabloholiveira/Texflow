@@ -1,28 +1,3 @@
-/* Ícone da etapa de produção, usado na ficha impressa.
-
-   MORA EM ui/ E NÃO EM data/: apesar de ser "um mapa de nome para coisa",
-   a coisa é marcação SVG — apresentação, não dado. Os módulos de data/
-   (orderStages, designStatuses, sizes, permissions) são todos JS puro, e
-   só arquivos .jsx passam pelo transform de JSX neste projeto.
-
-   POR QUE NÃO É COLUNA NO BANCO: a tabela `operations` já tem name,
-   sequence_position, phase e auto_add — acrescentar `icon` (e a UI em
-   Configurações para escolher) seria construir ícone configurável, que
-   ninguém pediu. O preço aceito é que uma operação nova criada em
-   Configurações sai com o marcador genérico até alguém mapear aqui; é o
-   que o fallback existe para fazer, e a ficha nunca quebra por isso.
-
-   A CHAVE É O NOME NORMALIZADO, não o id: `product.workflow[].step` é
-   texto livre (não tem FK para o catálogo — ver schema.sql), então a
-   "outra operação" digitada à mão na venda chega aqui como string solta.
-   Normalizar acento e pontuação faz "Revisão/Finalização", "Revisao /
-   Finalizacao" e "revisão / finalização" caírem todas na mesma lupa.
-
-   Bordado, Silk e DTF DIVIDEM o carretel de propósito: são três operações
-   independentes no domínio (e "Estampa" genérica não deve voltar, ver
-   CLAUDE.md), mas pictograma é reconhecimento visual, não taxonomia — o
-   rótulo ao lado continua sendo o nome real de cada uma. */
-
 function normalize(name) {
   return String(name ?? '')
     .toLowerCase()

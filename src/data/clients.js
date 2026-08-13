@@ -2,7 +2,7 @@ export const initialClients = [
   {
     id: 1,
     personName: 'Maria Silva',
-    companyName: 'Escola Alfa',
+    companyName: 'Colégio D. Pedro',
     document: '12.345.678/0001-90',
     phone: '(11) 91234-5678',
     email: '',

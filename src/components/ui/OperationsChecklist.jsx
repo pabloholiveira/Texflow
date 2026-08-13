@@ -6,19 +6,12 @@ function OperationsChecklist({ selectedSteps, onChange }) {
   const { operationsData } = useOperations()
   const [customStep, setCustomStep] = useState('')
 
-  // Etapas automáticas (auto_add — Revisão/Finalização e Embalagem) não
-  // aparecem: entram sozinhas em todo produto e o servidor as reaplica em
-  // toda edição, então oferecer um checkbox delas só confundiria. Lavagem
-  // continua na lista, porque é opcional de propósito.
+
   const operations = operationsData
     .filter((operation) => !operation.autoAdd)
     .map((operation) => operation.name)
 
-  // extraSteps é o mecanismo que mantém visível uma etapa que o produto tem
-  // mas o catálogo não oferece mais (uma "outra operação" digitada à mão, ou
-  // uma operação removida em Configurações). As automáticas precisam ficar
-  // de fora dele também: como acabaram de sair de `operations`, elas cairiam
-  // aqui e voltariam à tela justamente ao editar um produto que já as tem.
+ 
   const autoAddNames = operationsData
     .filter((operation) => operation.autoAdd)
     .map((operation) => operation.name)
