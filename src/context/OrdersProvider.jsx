@@ -32,6 +32,30 @@ export function OrdersProvider({ children }) {
       .finally(() => setIsLoading(false))
   }, [isAuthenticated])
 
+  /* Rebusca a lista inteira. Existe por causa de um caso só, e é um caso
+     real: converter um orçamento cria um PEDIDO por fora deste Provider (a
+     rota é POST /quotes/:id/convert), então o cache aqui não sabe que ele
+     existe — e OrderDetails, que lê deste cache, mostrava "Pedido não
+     encontrado" logo depois de converter.
+
+     Rebuscar tudo, e não inserir o pedido devolvido pela conversão: além do
+     pedido, a conversão cria os produtos e as etapas automáticas de cada
+     um, e montar essa árvore à mão no cliente seria uma segunda cópia da
+     regra do servidor esperando divergir. É uma requisição a mais num
+     gesto que acontece poucas vezes por dia.
+
+     Segue o contrato dos mutators: alerta e devolve null na falha. */
+  async function refreshOrders() {
+    try {
+      const data = await ordersApi.list()
+      setOrders(data)
+      return data
+    } catch (err) {
+      alert(err.message)
+      return null
+    }
+  }
+
   function replaceOrder(updatedOrder) {
     setOrders((current) =>
       current.map((order) => (order.id === updatedOrder.id ? updatedOrder : order))
@@ -377,6 +401,7 @@ export function OrdersProvider({ children }) {
       value={{
         orders,
         isLoading,
+        refreshOrders,
         createOrder,
         finalizeOrder,
         updateOrderInfo,

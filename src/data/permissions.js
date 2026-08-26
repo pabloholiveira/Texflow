@@ -30,6 +30,11 @@ export const ALL_STEPS_ROLES = ['admin', 'gerente']
 // de editar/excluir dentro do ProductCard.
 export const PERMISSIONS = {
   'orders.write': SALES_ROLES,
+  // Orçamento é documento comercial com preços, e a produção não tem o que
+  // fazer com ele — por isso a tela inteira é de vendas, sem a "leitura
+  // ampla" que /pedidos, /design e /producao têm. É a única tela de listagem
+  // com esse recorte além de /financeiro.
+  'quotes.manage': SALES_ROLES,
   'clients.manage': SALES_ROLES,
   'reports.view': SALES_ROLES,
   'design.move': DESIGN_ROLES,

@@ -100,6 +100,23 @@ export const filesApi = {
     request(`/products/${productId}/files/${fileId}`, { method: 'DELETE' }),
 }
 
+export const quotesApi = {
+  list: () => request('/quotes'),
+  get: (id) => request(`/quotes/${id}`),
+  // Cria com os itens juntos (e edita substituindo o conjunto inteiro):
+  // diferente de um pedido, um orçamento não precisa existir cedo para
+  // receber arquivo, então não há rascunho nem lixo acumulando.
+  create: (quote) => request('/quotes', { method: 'POST', body: quote }),
+  update: (id, quote) => request(`/quotes/${id}`, { method: 'PUT', body: quote }),
+  // Recusar e reabrir são rotas distintas, não um toggle — mesma razão de
+  // cancel/uncancel em ordersApi.
+  reject: (id) => request(`/quotes/${id}/reject`, { method: 'PATCH' }),
+  reopen: (id) => request(`/quotes/${id}/reopen`, { method: 'PATCH' }),
+  // Devolve { orderId, quote }: a tela navega para o pedido novo e já mostra
+  // o orçamento carimbado no caminho.
+  convert: (id, deadline) => request(`/quotes/${id}/convert`, { method: 'POST', body: { deadline } }),
+}
+
 export const clientsApi = {
   list: () => request('/clients'),
   create: (client) => request('/clients', { method: 'POST', body: client }),

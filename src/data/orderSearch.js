@@ -32,19 +32,44 @@ function normalize(value) {
     .replace(/[.\-/()\s]/g, '')
 }
 
-export function matchesOrderSearch(order, query, clients) {
-  const term = normalize(query)
-  if (!term) return true
-
-  const client = clients.find((item) => item.id === order.clientId)
-
-  const fields = [
-    order.orderNumber,
+function clientFields(clients, clientId) {
+  const client = clients.find((item) => item.id === clientId)
+  return [
     client && getClientDisplayName(client),
     client?.personName,
     client?.companyName,
     client?.document,
+  ]
+}
+
+export function matchesOrderSearch(order, query, clients) {
+  const term = normalize(query)
+  if (!term) return true
+
+  const fields = [
+    order.orderNumber,
+    ...clientFields(clients, order.clientId),
     ...order.products.flatMap((product) => [product.type, product.model]),
+  ]
+
+  return fields.some((field) => field && normalize(field).includes(term))
+}
+
+/* Busca de orçamentos (/orcamentos), mesma regra da de pedidos: número,
+   cliente e as peças por dentro.
+
+   Mora neste arquivo, e não num `quoteSearch.js` próprio, porque as duas
+   compartilham o `normalize` acima — que é a parte com regra de verdade
+   (acento, máscara de CPF). Duplicá-lo abriria a porta para as duas buscas
+   se comportarem diferente com o mesmo texto digitado. */
+export function matchesQuoteSearch(quote, query, clients) {
+  const term = normalize(query)
+  if (!term) return true
+
+  const fields = [
+    quote.quoteNumber,
+    ...clientFields(clients, quote.clientId),
+    ...quote.items.flatMap((item) => [item.type, item.model]),
   ]
 
   return fields.some((field) => field && normalize(field).includes(term))

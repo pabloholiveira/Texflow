@@ -18,6 +18,23 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/orcamentos',
+    label: 'Orçamentos',
+    // Antes de Pedidos porque o menu segue o fluxo real: a proposta vem
+    // antes da venda. Só vendas (ver 'quotes.manage' em permissions.js) —
+    // quem é da produção não vê o item nem a tela.
+    action: 'quotes.manage',
+    /* Etiqueta de preço, para não repetir a prancheta de Pedidos nem a
+       cédula do Financeiro: um orçamento não é dinheiro que entrou, é preço
+       proposto. O furo é o que faz a etiqueta se ler como etiqueta. */
+    icon: (
+      <>
+        <path d="M20.5 12.5 12 21l-8.5-8.5V3.5H12z" />
+        <circle cx="8" cy="8" r="1.6" />
+      </>
+    ),
+  },
+  {
     to: '/pedidos',
     label: 'Pedidos',
     icon: (

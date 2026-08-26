@@ -7,6 +7,7 @@ import orderProductsRouter from './routes/orderProducts.js'
 import productsRouter from './routes/products.js'
 import productCommentsRouter from './routes/productComments.js'
 import productFilesRouter from './routes/productFiles.js'
+import quotesRouter from './routes/quotes.js'
 import clientsRouter from './routes/clients.js'
 import operationsRouter from './routes/operations.js'
 import reportsRouter from './routes/reports.js'
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/products/:productId/comments', productCommentsRouter)
   app.use('/products/:productId/files', productFilesRouter)
   app.use('/products', productsRouter)
+  app.use('/quotes', quotesRouter)
   app.use('/clients', clientsRouter)
   app.use('/operations', operationsRouter)
   app.use('/reports', reportsRouter)

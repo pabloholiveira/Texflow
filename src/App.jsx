@@ -9,6 +9,9 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import Orders from './pages/Orders'
 import OrderDetails from './pages/OrderDetails'
+import Quotes from './pages/Quotes'
+import QuoteForm from './pages/QuoteForm'
+import QuoteDetails from './pages/QuoteDetails'
 import Clients from './pages/Clients'
 import Production from './pages/Production'
 import Conference from './pages/Conference'
@@ -48,6 +51,16 @@ function App() {
                       razão de /pedidos: é leitura, e quem está na máquina com
                       a peça na mão é justamente quem precisa abrir. */}
                   <Route path="/produtos/:productId" element={<ProtectedRoute><ProductView /></ProtectedRoute>} />
+
+                  {/* "novo" antes de ":id" pela mesma razão de /pedidos/novo:
+                      declarado depois, o path dinâmico engoliria a palavra e
+                      tentaria carregar um orçamento de id "novo". Toda a tela
+                      é `quotes.manage` — orçamento tem preço e não segue a
+                      "leitura ampla" das telas de chão de fábrica. */}
+                  <Route path="/orcamentos" element={<ProtectedRoute action="quotes.manage"><Quotes /></ProtectedRoute>} />
+                  <Route path="/orcamentos/novo" element={<ProtectedRoute action="quotes.manage"><QuoteForm /></ProtectedRoute>} />
+                  <Route path="/orcamentos/:id" element={<ProtectedRoute action="quotes.manage"><QuoteDetails /></ProtectedRoute>} />
+                  <Route path="/orcamentos/:id/editar" element={<ProtectedRoute action="quotes.manage"><QuoteForm /></ProtectedRoute>} />
 
                   <Route path="/clientes" element={<ProtectedRoute action="clients.manage"><Clients /></ProtectedRoute>} />
                   {/* /design e /producao ficam abertas a todo mundo de propósito:

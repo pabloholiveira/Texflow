@@ -1,0 +1,172 @@
+/* Orçamentos (2026-08-26).
+
+   Reaproveita as classes da lista de pedidos (.order-card, .order-info,
+   .products-panel) porque é a mesma linguagem visual — o que muda é o que
+   está escrito dentro. Aqui ficam só as diferenças reais. */
+
+/* O card de orçamento tem uma coluna a mais que o de pedido (valor), então
+   a grade precisa ser redeclarada — sem isso a quinta coluna quebraria para
+   a linha de baixo. */
+.order-card.quote-card {
+  grid-template-columns: 1.5fr 1fr 1fr 0.6fr 0.8fr;
+}
+
+/* Pílula de status, mesma família dos chips de workflow/estágio: cinza para
+   o que ainda não aconteceu, verde para o desfecho bom, laranja para o
+   prazo estourado, cinza-apagado para o recusado. */
+.quote-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-chip);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.quote-status-aberto {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.quote-status-convertido {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.quote-status-vencido {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.quote-status-recusado {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+/* Bloco em cartão para conteúdo que NÃO é par rótulo/valor: o formulário de
+   cliente/validade e o texto de observações. Existe porque .order-info é uma
+   grade de 3 colunas — usá-la aqui punha o título como célula ao lado dos
+   campos e espremia o cartão do cliente num terço da largura. Mesmo visual
+   de .order-stages, sem depender do nome de outra feature. */
+.quote-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.quote-section h2 {
+  margin-top: 0;
+}
+
+.quote-section-label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.quote-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Faixa de "virou pedido": mesma ideia da faixa de pedido cancelado — o
+   estado que muda o que se pode fazer na tela precisa ser visível antes de
+   alguém procurar o botão que sumiu. */
+.quote-converted-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-text);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  color: var(--color-success-text);
+}
+
+.quote-converted-banner a {
+  color: var(--color-success-text);
+  font-weight: 600;
+}
+
+/* Linha de peça da proposta. Três blocos: descrição (cresce), valor
+   (alinhado à direita, porque números se comparam pela unidade) e ações. */
+.quote-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 18px 22px;
+  margin-bottom: 12px;
+}
+
+.quote-item > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.quote-item p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.quote-item-sizes {
+  font-size: 13px;
+}
+
+.quote-item-value {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.quote-item-value span {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.quote-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.quote-total {
+  text-align: right;
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+/* Breakpoints: 1024 e 768, os mesmos do resto do projeto (o índice deles
+   está comentado no topo de variables.css — @media não lê var()). */
+@media (max-width: 1024px) {
+  .order-card.quote-card {
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-card.quote-card {
+    grid-template-columns: 1fr;
+  }
+
+  /* Empilha: com o valor e as ações lado a lado num celular, a descrição da
+     peça fica com uma coluna estreita demais para o nome do modelo. */
+  .quote-item {
+    flex-direction: column;
+  }
+
+  .quote-item-value {
+    text-align: left;
+  }
+}
