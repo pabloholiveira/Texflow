@@ -692,7 +692,20 @@ Planejada e aprovada pelo Pablo em 13/08 e construída em 26/08 — a proposta c
 
 **Falhas de teste, não do código** (todas do mesmo tipo já registrado): três asserções com número chumbado supondo que o banco só tinha o dado de teste — inclusive uma busca por `"0001"` que acha mais de um orçamento porque `normalize()` tira a pontuação e o CNPJ dos clientes empresa contém `/0001-`. Comportamento conhecido da busca, não defeito.
 
-**Não construído, e vale saber que não existe:** não há como **enviar o orçamento ao cliente** — sem ficha impressa e sem link de WhatsApp, embora as duas peças já existam no projeto (`print.css`/`ProductSheet` e `src/utils/whatsapp.js`) e seja o passo seguinte mais natural. Também não há orçamento no Dashboard, nem no Financeiro (correto: proposta não é venda), nem histórico de eventos do orçamento (o `product_events` é ancorado em pedido).
+### ⏭️ Combinado para uma sessão futura (2026-08-26): enviar o orçamento ao cliente
+
+Hoje **não há como entregar a proposta na mão do cliente** — o orçamento só existe dentro do sistema. O Pablo pediu os dois caminhos, para fazer numa próxima sessão:
+
+1. **Ficha/proposta impressa do orçamento** (para imprimir ou virar PDF).
+2. **Envio pelo WhatsApp**, no mesmo formato dos outros dois: link `wa.me` pré-preenchido, com **um humano clicando em enviar** — envio automático exigiria a API oficial paga, com template aprovado pela Meta.
+
+**Nada disso está planejado ainda** (não há decisão do Pablo sobre conteúdo, layout ou texto padrão) — o que segue é só o levantamento do que já existe, para a sessão futura não redescobrir:
+
+- **A mensagem** tem precedente pronto: a tabela `settings` é chave-valor **justamente para isto**, então um terceiro template (ex.: `whatsapp_quote_template`) é chave nova, **sem migration** — só a rota, o editor em Configurações e a entrada em `WHATSAPP_PLACEHOLDERS`. `buildWhatsAppMessage`/`buildWhatsAppLink` (`src/utils/whatsapp.js`) servem como estão; os placeholders é que mudam (`{{orcamento}}`, `{{validade}}`, `{{itens}}`, `{{valorTotal}}`).
+- **A impressão** tem `print.css` (o único arquivo em `mm`/`pt`) e o precedente de rota fora do `<Layout>` com `window.print()` guardado por `useRef`. **Mas a ficha de produção NÃO serve de base direta**: ela existe para a fábrica e por decisão do Pablo **não leva valores**, enquanto uma proposta é sobre preço. Vale o mesmo raciocínio que separou `ProductSheet` de `ProductDetailPanel` — leitores diferentes, documentos diferentes.
+- **Decisão que ainda precisa ser dele**: a proposta impressa é **por orçamento** (uma folha com todas as peças e o total), ao contrário da ficha de produção, que é por peça porque a peça anda sozinha pela fábrica. Um documento comercial vai inteiro para o cliente — mas confirmar antes de codar.
+
+**Também não existe (e ninguém pediu):** orçamento no Dashboard, no Financeiro (correto — proposta não é venda) e histórico de eventos do orçamento (o `product_events` é ancorado em pedido).
 
 ## Visão financeira para administradores (✅ 2026-08-04/05, três entregas)
 
